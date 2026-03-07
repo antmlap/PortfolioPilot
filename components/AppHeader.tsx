@@ -12,6 +12,7 @@ interface AppHeaderProps {
 export function AppHeader({ rightSlot, className }: AppHeaderProps) {
   const pathname = usePathname();
   const isPortfolio = pathname === "/portfolio";
+  const isBrowse = pathname === "/browse";
 
   return (
     <header
@@ -47,17 +48,27 @@ export function AppHeader({ rightSlot, className }: AppHeaderProps) {
               href="/"
               className={clsx(
                 "text-sm font-medium transition-colors whitespace-nowrap",
-                !isPortfolio ? "text-accent" : "text-mute hover:text-accent"
+                !isPortfolio && !isBrowse ? "text-accent" : "text-mute hover:text-accent"
               )}
-              aria-current={!isPortfolio ? "page" : undefined}
+              aria-current={!isPortfolio && !isBrowse ? "page" : undefined}
             >
               Analyze
+            </Link>
+            <Link
+              href="/browse"
+              className={clsx(
+                "text-sm font-medium transition-colors whitespace-nowrap",
+                isBrowse ? "text-accent hover:text-accent-hover" : "text-mute hover:text-accent"
+              )}
+              aria-current={isBrowse ? "page" : undefined}
+            >
+              Browse
             </Link>
             <Link
               href="/portfolio"
               className={clsx(
                 "text-sm font-medium transition-colors whitespace-nowrap",
-                isPortfolio ? "text-accent hover:text-accent-hover" : "text-mute hover:text-accent"
+                isPortfolio ? "text-accent" : "text-mute hover:text-accent"
               )}
               aria-current={isPortfolio ? "page" : undefined}
             >

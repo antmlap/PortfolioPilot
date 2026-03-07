@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Loader2 } from "lucide-react";
 import { DiscussionThread } from "@/components/DiscussionThread";
 import { SentimentGauge } from "@/components/SentimentGauge";
@@ -20,7 +21,9 @@ import type { StockSentimentSummary } from "@/lib/sentiment";
 
 const DEFAULT_SYMBOL = "AAPL";
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const symbolFromUrl = searchParams.get("symbol")?.trim().toUpperCase();
   const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
   const [inputSymbol, setInputSymbol] = useState(DEFAULT_SYMBOL);
   const [companyName, setCompanyName] = useState<string | null>(null);
@@ -123,6 +126,13 @@ export default function Home() {
   }, [buildAdvisorsForDiscussion, customAdvisors, instructionOverrides, selectedAdvisorIds]);
 
   useEffect(() => {
+    if (symbolFromUrl && symbolFromUrl.length <= 6) {
+      setSymbol(symbolFromUrl);
+      setInputSymbol(symbolFromUrl);
+    }
+  }, [symbolFromUrl]);
+
+  useEffect(() => {
     fetchData(symbol);
   }, [symbol, fetchData]);
 
@@ -199,6 +209,12 @@ export default function Home() {
                 </span>
               </a>
               <div className="flex items-center gap-3">
+                <a
+                  href="/browse"
+                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
+                >
+                  Browse
+                </a>
                 <a
                   href="/portfolio"
                   className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
@@ -412,5 +428,21 @@ export default function Home() {
         </footer>
       </div>
     </ErrorBoundary>
+  );
+}
+
+function HomeFallback() {
+  return (
+    <div className="min-h-screen bg-paper flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-accent animate-spin" aria-hidden />
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<HomeFallback />}>
+      <HomeContent />
+    </Suspense>
   );
 }

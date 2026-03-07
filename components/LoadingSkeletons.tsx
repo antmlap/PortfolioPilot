@@ -61,3 +61,19 @@ export function SidebarSkeleton() {
     </div>
   );
 }
+
+/** Skeleton for browse section (compact ticker rows). */
+export function BrowseSkeleton() {
+  return (
+    <ul className="divide-y divide-border/60" role="list">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <li key={i} className="py-2 px-3 flex items-center gap-2 animate-pulse">
+          <div className="h-3.5 w-12 bg-border rounded shrink-0" />
+          <div className="h-3 w-24 bg-border/80 rounded flex-1 min-w-0" />
+          <div className="h-3 w-10 bg-border rounded shrink-0 ml-auto" />
+          <div className="h-3 w-8 bg-border/60 rounded shrink-0" />
+        </li>
+      ))}
+    </ul>
+  );
+}
