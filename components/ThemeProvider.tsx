@@ -85,7 +85,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         ...(customBackground && { ["--paper" as string]: customBackground }),
         ...(customBoxColor && { ["--surface" as string]: customBoxColor }),
       }
-    : undefined;
+    : {};
 
   return (
     <ThemeContext.Provider

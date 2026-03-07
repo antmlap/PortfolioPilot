@@ -1,12 +1,4 @@
 import { NextResponse } from "next/server";
-import { getSymbolInfo } from "@/lib/symbols";
-
-/** Symbols to fetch for biggest movers (subset for reasonable API time). */
-const MOVER_SYMBOLS = [
-  "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "JPM", "V", "JNJ",
-  "WMT", "PG", "MA", "HD", "DIS", "BAC", "XOM", "ADBE", "CRM", "NFLX",
-  "COST", "PEP", "KO", "AVGO", "ACN", "CSCO", "INTC", "AMD", "QCOM", "TXN",
-];
 
 export interface BrowseEarning {
   symbol: string;
@@ -79,41 +71,40 @@ function getMockIpos(): BrowseIpo[] {
   });
 }
 
+/** Map Yahoo screener quote to BrowseMover. */
+function screenerQuoteToMover(q: {
+  symbol: string;
+  shortName?: string;
+  longName?: string;
+  regularMarketPrice: number;
+  regularMarketChange: number;
+  regularMarketChangePercent: number;
+}): BrowseMover {
+  return {
+    symbol: q.symbol,
+    name: q.longName ?? q.shortName ?? q.symbol,
+    price: Math.round(q.regularMarketPrice * 100) / 100,
+    changePercent: Math.round(q.regularMarketChangePercent * 100) / 100,
+    change: Math.round(q.regularMarketChange * 100) / 100,
+  };
+}
+
 export async function GET() {
   try {
     const { default: YahooFinance } = await import("yahoo-finance2");
     const yf = new YahooFinance();
 
-    const quotes = await Promise.allSettled(
-      MOVER_SYMBOLS.map((sym) => yf.quote(sym))
+    const [gainersRes, losersRes] = await Promise.all([
+      yf.screener({ scrIds: "day_gainers", count: 10 }),
+      yf.screener({ scrIds: "day_losers", count: 10 }),
+    ]);
+
+    const topGainers: BrowseMover[] = (gainersRes?.quotes ?? []).slice(0, 10).map((q: { symbol: string; shortName?: string; longName?: string; regularMarketPrice: number; regularMarketChange: number; regularMarketChangePercent: number }) =>
+      screenerQuoteToMover(q)
     );
-
-    const movers: BrowseMover[] = [];
-    for (let i = 0; i < MOVER_SYMBOLS.length; i++) {
-      const result = quotes[i];
-      if (result.status !== "fulfilled" || !result.value) continue;
-      const q = Array.isArray(result.value) ? result.value[0] : result.value;
-      const sym = MOVER_SYMBOLS[i];
-      const price = (q as { regularMarketPrice?: number }).regularMarketPrice;
-      const change = (q as { regularMarketChange?: number }).regularMarketChange ?? 0;
-      const changePercent = (q as { regularMarketChangePercent?: number }).regularMarketChangePercent;
-      const prevClose = (q as { regularMarketPreviousClose?: number }).regularMarketPreviousClose;
-      const pct = changePercent ?? (prevClose ? (change / prevClose) * 100 : 0);
-      if (typeof price === "number" && Number.isFinite(price)) {
-        const info = getSymbolInfo(sym);
-        movers.push({
-          symbol: sym,
-          name: info?.name ?? sym,
-          price: Math.round(price * 100) / 100,
-          changePercent: Math.round(pct * 100) / 100,
-          change: Math.round(change * 100) / 100,
-        });
-      }
-    }
-
-    movers.sort((a, b) => b.changePercent - a.changePercent);
-    const topGainers = movers.filter((m) => m.changePercent > 0).slice(0, 10);
-    const topLosers = movers.filter((m) => m.changePercent < 0).slice(0, 10);
+    const topLosers: BrowseMover[] = (losersRes?.quotes ?? []).slice(0, 10).map((q: { symbol: string; shortName?: string; longName?: string; regularMarketPrice: number; regularMarketChange: number; regularMarketChangePercent: number }) =>
+      screenerQuoteToMover(q)
+    );
 
     const data: BrowseData = {
       upcomingEarnings: getMockEarnings(),
