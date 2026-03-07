@@ -13,10 +13,11 @@ Built for hackathon demo. Sentiment and discussion use mock data; plug in News A
 
 ## Run locally
 
-1. Copy `.env.example` to `.env.local` and add your OpenAI API key:
+1. Copy `.env.example` to `.env.local` and add your Gemini API key:
    ```
-   OPENAI_API_KEY=sk-...
+   GEMINI_API_KEY=your-key
    ```
+   Get a key at [Google AI Studio](https://aistudio.google.com/apikey).
 2. Install and run:
    ```bash
    npm install
@@ -24,7 +25,7 @@ Built for hackathon demo. Sentiment and discussion use mock data; plug in News A
    ```
 3. Open [http://localhost:3000](http://localhost:3000), enter a ticker (e.g. AAPL), and click **Analyze**.
 
-If `OPENAI_API_KEY` is not set, the app falls back to mock advisor responses.
+If `GEMINI_API_KEY` is not set, the app falls back to mock advisor responses.
 
 ## Stack
 

@@ -1,10 +1,10 @@
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
 import type { DiscussionMessage } from "./discussion";
 import type { StockSentimentSummary } from "./sentiment";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 function parseProCon(text: string): { content: string; isPro: boolean } {
@@ -26,7 +26,7 @@ function parseProCon(text: string): { content: string; isPro: boolean } {
   return { content: t, isPro: true };
 }
 
-export async function generateDiscussionWithOpenAI(
+export async function generateDiscussionWithGemini(
   symbol: string,
   sentiment: StockSentimentSummary
 ): Promise<DiscussionMessage[]> {
@@ -40,7 +40,6 @@ Average outperformance vs sentiment: ${sentiment.avgOutperformance}%.
 Recent headlines: ${headlinesSnippet}.`;
 
   const messages: DiscussionMessage[] = [];
-  const timestamp = new Date().toISOString();
 
   for (let i = 0; i < ADVISOR_IDS.length; i++) {
     const advisorId = ADVISOR_IDS[i] as AdvisorId;
@@ -62,34 +61,40 @@ ${priorTakes}
 
 Give your brief investment take on ${symbol} in 2-4 sentences, from your usual perspective. Say whether you're generally favorable (Pro) or cautious (Con) and why. End your response with exactly "(Pro)" or "(Con)".`;
 
+    const fullPrompt = `You are roleplaying as ${advisor.name}. Follow these instructions exactly:
+
+${advisor.instructions}
+
+---
+${userMessage}`;
+
     try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: advisor.instructions },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 200,
-        temperature: 0.7,
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: fullPrompt,
+        config: {
+          maxOutputTokens: 200,
+          temperature: 0.7,
+        },
       });
-      const raw = completion.choices[0]?.message?.content ?? "";
+      const raw = response.text ?? "";
       const { content, isPro } = parseProCon(raw);
       messages.push({
         id: String(i + 1),
         advisorId,
         role: "advisor",
         content: content || raw,
-        timestamp,
+        timestamp: new Date().toISOString(),
         isPro,
       });
     } catch (err) {
-      console.error(`OpenAI error for ${advisorId}:`, err);
+      console.error(`Gemini error for ${advisorId}:`, err);
       messages.push({
         id: String(i + 1),
         advisorId,
         role: "advisor",
         content: `[Error generating take for ${advisor.name}. Please try again.]`,
-        timestamp,
+        timestamp: new Date().toISOString(),
         isPro: true,
       });
     }
