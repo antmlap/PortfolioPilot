@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
 
 export interface PortfolioContextItem {
   symbol: string;
@@ -14,8 +15,15 @@ export interface ChatMessage {
 }
 
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: process.env.GEMINI_API_KEY ?? "",
 });
+
+function extractText(response: unknown): string {
+  const r = response as { text?: string; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  if (typeof r?.text === "string" && r.text.trim()) return r.text;
+  const part = r?.candidates?.[0]?.content?.parts?.[0];
+  return (part?.text as string) ?? "";
+}
 
 function buildPortfolioSummary(context: PortfolioContextItem[]): string {
   if (context.length === 0) {
@@ -31,28 +39,43 @@ function buildPortfolioSummary(context: PortfolioContextItem[]): string {
     .join("\n");
 }
 
-const ADVISOR_PERSONAS = `
-- Warren Buffett (value, long-term): Focus on moats, intrinsic value, circle of competence. Concise, plain language.
-- Peter Lynch (growth at reasonable price): "Invest in what you know," ten-baggers, PEG, earnings growth. Concise.
-- Ray Dalio (principles, all-weather): Diversification, principles, risk parity. Concise.
-- Benjamin Graham (value, margin of safety): Margin of safety, Mr. Market, intrinsic value. Concise.
-- Cathie Wood (innovation, disruption): Long-term innovation, disruptive tech, thematic. Concise.`;
+const GENERAL_AI_SYSTEM_PROMPT = `You are a helpful financial assistant. Discuss the user's portfolio and holdings based on the data provided. Be concise and practical. If they have no holdings yet, offer general guidance or sector ideas.`;
+
+function buildSystemPrompt(
+  portfolioSummary: string,
+  advisorId: string | undefined | null
+): string {
+  const contextBlock = `
+Current holdings and recent performance (sentiment and outperform metrics):
+${portfolioSummary}
+`;
+
+  if (!advisorId || advisorId === "general") {
+    return `${GENERAL_AI_SYSTEM_PROMPT}
+${contextBlock}
+Answer the user's questions about their portfolio. Keep responses concise (2–4 sentences when appropriate).`;
+  }
+
+  if (ADVISOR_IDS.includes(advisorId as AdvisorId)) {
+    const advisor = ADVISORS[advisorId as AdvisorId];
+    return `You are roleplaying as ${advisor.name}. Follow these instructions exactly:
+
+${advisor.instructions}
+${contextBlock}
+Respond in first person as ${advisor.name}. Comment on the user's portfolio, holdings, or their question from your investment philosophy. Keep your reply to 2–4 sentences unless the user asks for more.`;
+  }
+
+  return `${GENERAL_AI_SYSTEM_PROMPT}
+${contextBlock}`;
+}
 
 export async function generatePortfolioChatReply(
   messages: ChatMessage[],
-  portfolioContext: PortfolioContextItem[]
+  portfolioContext: PortfolioContextItem[],
+  advisorId?: string | null
 ): Promise<string> {
   const portfolioSummary = buildPortfolioSummary(portfolioContext);
-  const systemPrompt = `You simulate a roundtable of financial advisors discussing the user's portfolio and current holdings. Each advisor has a distinct philosophy:
-
-${ADVISOR_PERSONAS}
-
-Current holdings and recent performance (sentiment and outperform metrics):
-${portfolioSummary}
-
-Your task: Produce a single reply that is a discussion among these advisors about the user's portfolio and/or their latest question. Format the reply so each advisor speaks in turn (e.g. "Buffett: ... Lynch: ... Dalio: ..." or use clear labels). Each advisor should comment on the holdings, concentration, risk, or the user's question from their own perspective. Keep each advisor's take to 1-3 sentences. The discussion should feel like different voices debating or agreeing on the portfolio. If the user asks a specific question, have the advisors address it. If they have no holdings yet, have the advisors discuss what to consider or which sectors might fit each philosophy.
-
-Always end your reply with a "TL;DR:" line: one or two sentences summarizing the main takeaways or consensus from the discussion.`;
+  const systemPrompt = buildSystemPrompt(portfolioSummary, advisorId);
 
   const contents: { role: "user" | "model"; parts: { text: string }[] }[] = [];
   for (const msg of messages) {
@@ -60,15 +83,32 @@ Always end your reply with a "TL;DR:" line: one or two sentences summarizing the
     contents.push({ role, parts: [{ text: msg.content }] });
   }
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: contents.length > 0 ? contents : [{ role: "user", parts: [{ text: "(User said nothing yet.)" }] }],
+  const payload = {
+    model: "gemini-2.0-flash",
+    contents: contents.length > 0 ? contents : [{ role: "user" as const, parts: [{ text: "(User said nothing yet.)" }] }],
     config: {
       systemInstruction: systemPrompt,
       maxOutputTokens: 4096,
       temperature: 0.7,
     },
-  });
+  };
 
-  return response.text ?? "";
+  const maxAttempts = 3;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await ai.models.generateContent(payload);
+      return extractText(response) || "";
+    } catch (err) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      const isRateLimit = msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota") || msg.includes("rate");
+      if (isRateLimit && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 6000));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
 }

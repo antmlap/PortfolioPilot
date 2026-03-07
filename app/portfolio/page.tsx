@@ -1,11 +1,22 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { SentimentGauge } from "@/components/SentimentGauge";
 import type { StockSentimentSummary } from "@/lib/sentiment";
-import { Loader2, Plus, MessageSquare, Send, Trash2 } from "lucide-react";
+import { ADVISORS, ADVISOR_IDS } from "@/lib/advisors";
+import { Loader2, Plus, MessageSquare, Send, Trash2, ChevronDown, Check } from "lucide-react";
 import clsx from "clsx";
+
+const PORTFOLIO_STORAGE_KEY = "portfolio-pilot-symbols";
+
+const CHAT_OPTIONS: { id: string; name: string; title: string; avatar: string; tagline: string }[] = [
+  ...ADVISOR_IDS.map((id) => {
+    const a = ADVISORS[id];
+    return { id, name: a.name, title: a.title, avatar: a.avatar, tagline: a.tagline };
+  }),
+  { id: "general", name: "General AI", title: "No specific persona", avatar: "🤖", tagline: "Chat with a general financial assistant." },
+];
 
 export default function PortfolioPage() {
   const [tickerInput, setTickerInput] = useState("");
@@ -13,10 +24,48 @@ export default function PortfolioPage() {
   const [holdings, setHoldings] = useState<StockSentimentSummary[]>([]);
   const [addingSymbol, setAddingSymbol] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  const [selectedAdvisor, setSelectedAdvisor] = useState<string | null>("general");
+  const [advisorDropdownOpen, setAdvisorDropdownOpen] = useState(false);
+  const advisorDropdownRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<{ role: "user" | "model"; content: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [sendingChat, setSendingChat] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (advisorDropdownRef.current && !advisorDropdownRef.current.contains(e.target as Node)) {
+        setAdvisorDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem(PORTFOLIO_STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const stored = JSON.parse(raw);
+      if (!Array.isArray(stored) || stored.some((s: unknown) => typeof s !== "string")) return;
+      const list = (stored as string[])
+        .map((s) => String(s).trim().toUpperCase())
+        .filter((s) => /^[A-Z]{1,5}(\.[A-Z])?$/.test(s));
+      if (list.length === 0) return;
+      setSymbols(list);
+      Promise.all(
+        list.map((symbol) =>
+          fetch(`/api/sentiment?symbol=${encodeURIComponent(symbol)}&strict=true`).then((r) => (r.ok ? r.json() : null))
+        )
+      ).then((results) => {
+        const summaries = results.filter((r): r is StockSentimentSummary => r != null);
+        setHoldings(summaries);
+      });
+    } catch {
+      // ignore invalid stored data
+    }
+  }, []);
 
   const addToPortfolio = useCallback(async () => {
     const symbol = tickerInput.trim().toUpperCase();
@@ -39,9 +88,13 @@ export default function PortfolioPage() {
         throw new Error(msg);
       }
       const data: StockSentimentSummary = await res.json();
-      setSymbols((prev) => [...prev, symbol]);
+      const nextSymbols = [...symbols, symbol];
+      setSymbols(nextSymbols);
       setHoldings((prev) => [...prev, data]);
       setTickerInput("");
+      if (typeof window !== "undefined") {
+        localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(nextSymbols));
+      }
     } catch (e) {
       setAddError(e instanceof Error ? e.message : `Failed to add ${symbol}.`);
     } finally {
@@ -50,13 +103,19 @@ export default function PortfolioPage() {
   }, [tickerInput, symbols]);
 
   const removeFromPortfolio = useCallback((symbol: string) => {
-    setSymbols((prev) => prev.filter((s) => s !== symbol));
+    setSymbols((prev) => {
+      const next = prev.filter((s) => s !== symbol);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
     setHoldings((prev) => prev.filter((h) => h.symbol !== symbol));
   }, []);
 
   const sendChat = useCallback(async () => {
     const text = chatInput.trim();
-    if (!text || sendingChat) return;
+    if (!text || sendingChat || !selectedAdvisor) return;
     const userMessage = { role: "user" as const, content: text };
     setMessages((prev) => [...prev, userMessage]);
     setChatInput("");
@@ -67,7 +126,7 @@ export default function PortfolioPage() {
       const res = await fetch("/api/portfolio-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, symbols }),
+        body: JSON.stringify({ messages: nextMessages, symbols, advisorId: selectedAdvisor }),
       });
       const data = await res.json();
       const modelContent = data?.message?.content ?? "No response.";
@@ -77,7 +136,7 @@ export default function PortfolioPage() {
     } finally {
       setSendingChat(false);
     }
-  }, [chatInput, sendingChat, messages, symbols]);
+  }, [chatInput, sendingChat, messages, symbols, selectedAdvisor]);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -207,11 +266,17 @@ export default function PortfolioPage() {
             Chat with advisors
           </h2>
           <p className="text-mute text-xs mb-4">
-            Get a roundtable discussion: different advisors weigh in on your current holdings and portfolio.
+            Choose an advisor or General AI, then ask questions about your portfolio and holdings.
           </p>
+
           <div className="flex-1 min-h-[200px] max-h-[400px] overflow-y-auto scrollbar-thin space-y-4 mb-4">
-            {messages.length === 0 && (
-              <p className="text-mute text-sm py-4">Send a message to hear advisors discuss your holdings and portfolio.</p>
+            {!selectedAdvisor && (
+              <p className="text-mute text-sm py-4">Choose who to chat with from the selector below.</p>
+            )}
+            {selectedAdvisor && messages.length === 0 && (
+              <p className="text-mute text-sm py-4">
+                Send a message to chat with {selectedAdvisor === "general" ? "General AI" : CHAT_OPTIONS.find((o) => o.id === selectedAdvisor)?.name}.
+              </p>
             )}
             {messages.map((msg, i) => (
               <div
@@ -224,7 +289,7 @@ export default function PortfolioPage() {
                 )}
               >
                 <p className="text-xs font-medium text-mute mb-1">
-                  {msg.role === "user" ? "You" : "Advisors"}
+                  {msg.role === "user" ? "You" : selectedAdvisor === "general" ? "General AI" : CHAT_OPTIONS.find((o) => o.id === selectedAdvisor)?.name ?? "Advisor"}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               </div>
@@ -235,23 +300,83 @@ export default function PortfolioPage() {
               {chatError}
             </p>
           )}
-          <div className="flex gap-2">
+
+          {/* ChatGPT-style input bar: advisor dropdown + input + send */}
+          <div className="flex items-end gap-0 rounded-xl border border-border bg-surface shadow-sm overflow-visible">
+            <div className="relative flex-shrink-0 overflow-visible" ref={advisorDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setAdvisorDropdownOpen((o) => !o)}
+                className="flex items-center gap-2 px-4 py-3 h-full min-h-[52px] text-left hover:bg-paper/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-inset"
+                aria-expanded={advisorDropdownOpen}
+                aria-haspopup="listbox"
+                aria-label="Choose advisor"
+              >
+                <span className="text-lg">
+                  {selectedAdvisor ? CHAT_OPTIONS.find((o) => o.id === selectedAdvisor)?.avatar : "💬"}
+                </span>
+                <span className="text-sm font-medium text-ink max-w-[140px] truncate">
+                  {selectedAdvisor ? CHAT_OPTIONS.find((o) => o.id === selectedAdvisor)?.name : "Choose advisor"}
+                </span>
+                <ChevronDown className={clsx("w-4 h-4 text-mute flex-shrink-0 transition-transform", advisorDropdownOpen && "rotate-180")} aria-hidden />
+              </button>
+
+              {advisorDropdownOpen && (
+                <div
+                  className="absolute bottom-full left-0 mb-1 w-[320px] rounded-xl border border-border bg-paper shadow-lg overflow-hidden z-[100]"
+                  role="listbox"
+                  aria-label="Advisor options"
+                >
+                  <div className="p-2 border-b border-border">
+                    <p className="text-xs font-semibold text-mute uppercase tracking-wider px-2 py-1">Advisors</p>
+                  </div>
+                  <div className="max-h-[280px] overflow-y-auto py-1">
+                    {CHAT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="option"
+                        aria-selected={selectedAdvisor === opt.id}
+                        onClick={() => {
+                          setSelectedAdvisor(opt.id);
+                          setAdvisorDropdownOpen(false);
+                        }}
+                        className={clsx(
+                          "w-full flex items-start gap-3 px-4 py-3 text-left rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-inset",
+                          selectedAdvisor === opt.id ? "bg-orange-mute" : "hover:bg-surface"
+                        )}
+                      >
+                        <span className="text-2xl flex-shrink-0 mt-0.5">{opt.avatar}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-ink">{opt.name}</p>
+                          <p className="text-xs text-mute mt-0.5">{opt.tagline}</p>
+                        </div>
+                        {selectedAdvisor === opt.id && (
+                          <Check className="w-5 h-5 text-accent flex-shrink-0" aria-hidden />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendChat()}
-              placeholder="Ask advisors to discuss your portfolio..."
-              className="flex-1 px-3 py-2 rounded-md bg-surface border border-border text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+              placeholder="Ask anything..."
+              className="flex-1 min-w-0 px-4 py-3 bg-transparent text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-0 border-0"
             />
             <button
               type="button"
               onClick={sendChat}
-              disabled={sendingChat || !chatInput.trim()}
-              className="px-4 py-2 rounded-md bg-accent text-white font-medium text-sm hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+              disabled={sendingChat || !chatInput.trim() || !selectedAdvisor}
+              className="flex-shrink-0 p-3 text-accent hover:bg-paper/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-inset"
+              aria-label="Send"
             >
-              {sendingChat ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <Send className="w-4 h-4" aria-hidden />}
-              Send
+              {sendingChat ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> : <Send className="w-5 h-5" aria-hidden />}
             </button>
           </div>
         </section>

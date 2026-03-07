@@ -7,7 +7,7 @@ import {
 } from "@/lib/portfolio-chat";
 
 export async function POST(request: NextRequest) {
-  let body: { messages?: ChatMessage[]; symbols?: string[] };
+  let body: { messages?: ChatMessage[]; symbols?: string[]; advisorId?: string };
   try {
     body = await request.json();
   } catch {
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   const messages = Array.isArray(body.messages) ? body.messages : [];
+  const advisorId = typeof body.advisorId === "string" ? body.advisorId.trim() || undefined : undefined;
   const symbols = Array.isArray(body.symbols)
     ? body.symbols.map((s) => String(s).toUpperCase().trim()).filter(Boolean)
     : [];
@@ -46,18 +47,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const text = await generatePortfolioChatReply(messages, portfolioContext);
+    const text = await generatePortfolioChatReply(messages, portfolioContext, advisorId);
     return NextResponse.json({
       message: { role: "model" as const, content: text },
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("Portfolio chat error:", err);
+    const isRateLimit = message.includes("429") || message.includes("RESOURCE_EXHAUSTED") || message.includes("quota") || message.includes("rate limit");
+    const userMessage = isRateLimit
+      ? "You've hit the free tier rate limit. Please wait a minute and try again."
+      : process.env.NODE_ENV === "development" && message
+        ? `Sorry, I couldn't process that. (${message})`
+        : "Sorry, I couldn't process that. Please try again. Check that GEMINI_API_KEY is set in .env.local and valid.";
     return NextResponse.json(
       {
-        message: {
-          role: "model",
-          content: "Sorry, I couldn't process that. Please try again.",
-        },
+        message: { role: "model" as const, content: userMessage },
       },
       { status: 200 }
     );
