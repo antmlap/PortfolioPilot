@@ -3,7 +3,7 @@ import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from
 import type { DiscussionMessage } from "./discussion";
 import type { StockSentimentSummary } from "./sentiment";
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY ?? "",
 });

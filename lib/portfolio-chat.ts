@@ -84,7 +84,7 @@ export async function generatePortfolioChatReply(
   }
 
   const payload = {
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash-lite",
     contents: contents.length > 0 ? contents : [{ role: "user" as const, parts: [{ text: "(User said nothing yet.)" }] }],
     config: {
       systemInstruction: systemPrompt,
