@@ -17,6 +17,13 @@ interface SentimentChartProps {
 }
 
 export function SentimentChart({ data, className }: SentimentChartProps) {
+  if (!data?.length) {
+    return (
+      <div className={className}>
+        <p className="text-xs text-slate-500 font-mono">No historical data yet.</p>
+      </div>
+    );
+  }
   const chartData = data.map((d) => ({
     ...d,
     dateShort: d.date.slice(5),

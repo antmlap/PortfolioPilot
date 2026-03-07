@@ -48,14 +48,27 @@ function scoreToLevel(score: number): SentimentLevel {
   return "very_bullish";
 }
 
+/** Simple deterministic hash so the same symbol gets the same sentiment in a session. */
+function hashSymbol(symbol: string): number {
+  let h = 0;
+  for (let i = 0; i < symbol.length; i++) {
+    h = (h * 31 + symbol.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
 /** Generate mock sentiment + performance for demo. Replace with real API in production. */
 export function getMockStockSentiment(symbol: string): StockSentimentSummary {
   const now = new Date();
-  const currentScore = 0.3 + Math.random() * 0.4;
+  const seed = (hashSymbol(symbol) % 100) / 100;
+  const timeSeed = (now.getHours() * 60 + now.getMinutes()) / (24 * 60);
+  const combined = (seed * 0.7 + timeSeed * 0.3);
+  const currentScore = -0.75 + combined * 1.5;
+  const clamp = (x: number) => Math.max(-1, Math.min(1, x));
   const recentHeadlines = [
-    { text: `${symbol} beats earnings estimates amid strong demand`, score: 0.5, date: formatDate(now) },
-    { text: `Analysts raise price targets on ${symbol}`, score: 0.4, date: formatDate(now) },
-    { text: `Sector headwinds could pressure ${symbol} margins`, score: -0.2, date: formatDate(now) },
+    { text: `${symbol} beats earnings estimates amid strong demand`, score: clamp(currentScore + 0.1), date: formatDate(now) },
+    { text: `Analysts raise price targets on ${symbol}`, score: clamp(currentScore + 0.2), date: formatDate(now) },
+    { text: `Sector headwinds could pressure ${symbol} margins`, score: clamp(currentScore - 0.3), date: formatDate(now) },
   ];
   const historical: SentimentVsPerformance[] = [];
   for (let i = 90; i >= 0; i -= 10) {
@@ -79,7 +92,7 @@ export function getMockStockSentiment(symbol: string): StockSentimentSummary {
 
   return {
     symbol,
-    currentSentiment: currentScore,
+    currentSentiment: Math.round(currentScore * 100) / 100,
     currentLevel: scoreToLevel(currentScore),
     recentHeadlines,
     historical,

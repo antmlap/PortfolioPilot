@@ -3,8 +3,9 @@ import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
 import type { DiscussionMessage } from "./discussion";
 import type { StockSentimentSummary } from "./sentiment";
 
+const GEMINI_MODEL = "gemini-1.5-flash";
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: process.env.GEMINI_API_KEY ?? "",
 });
 
 function parseProCon(text: string): { content: string; isPro: boolean } {
@@ -24,6 +25,15 @@ function parseProCon(text: string): { content: string; isPro: boolean } {
     };
   }
   return { content: t, isPro: true };
+}
+
+function extractText(response: unknown): string {
+  if (typeof (response as { text?: string }).text === "string") {
+    return (response as { text: string }).text;
+  }
+  const r = response as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const part = r.candidates?.[0]?.content?.parts?.[0];
+  return (part?.text as string) ?? "";
 }
 
 export async function generateDiscussionWithGemini(
@@ -70,14 +80,17 @@ ${userMessage}`;
 
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: GEMINI_MODEL,
         contents: fullPrompt,
         config: {
-          maxOutputTokens: 200,
+          maxOutputTokens: 256,
           temperature: 0.7,
         },
       });
-      const raw = response.text ?? "";
+      const raw = extractText(response);
+      if (!raw || raw.includes("Error") || raw.length < 10) {
+        throw new Error("Empty or invalid Gemini response");
+      }
       const { content, isPro } = parseProCon(raw);
       messages.push({
         id: String(i + 1),
@@ -89,14 +102,7 @@ ${userMessage}`;
       });
     } catch (err) {
       console.error(`Gemini error for ${advisorId}:`, err);
-      messages.push({
-        id: String(i + 1),
-        advisorId,
-        role: "advisor",
-        content: `[Error generating take for ${advisor.name}. Please try again.]`,
-        timestamp: new Date().toISOString(),
-        isPro: true,
-      });
+      throw err;
     }
   }
 

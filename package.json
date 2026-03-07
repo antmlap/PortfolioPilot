@@ -9,13 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/genai": "^1.44.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.460.0",
     "next": "14.2.18",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^2.13.3",
-    "lucide-react": "^0.460.0",
-    "clsx": "^2.1.1",
-    "@google/genai": "^1.44.0"
+    "recharts": "^2.13.3"
   },
   "devDependencies": {
     "@types/node": "^20",

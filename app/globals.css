@@ -15,11 +15,16 @@ body {
   color: #e2e8f0;
 }
 
+/* Focus visible for accessibility */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-teal;
+}
+
 /* Subtle grid background */
 .bg-grid {
   background-image:
-    linear-gradient(rgba(45, 212, 191, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(45, 212, 191, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(45, 212, 191, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 212, 191, 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
@@ -38,4 +43,15 @@ body {
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   @apply bg-slate-700 rounded-full hover:bg-slate-600;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -17,9 +17,10 @@ export function ErrorState({ message = "Something went wrong.", onRetry }: Error
       <button
         type="button"
         onClick={onRetry}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+        aria-label="Retry loading"
       >
-        <RefreshCw className="w-4 h-4" />
+        <RefreshCw className="w-4 h-4" aria-hidden />
         Try again
       </button>
     </div>

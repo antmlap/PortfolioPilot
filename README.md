@@ -2,22 +2,22 @@
 
 **Multi-agent stock advisory platform** — Get debate-style analysis from AI personas of famous investors (Buffett, Lynch, Dalio, Graham, Cathie Wood) with real-time sentiment and historical sentiment-vs-performance metrics.
 
-Built for hackathon demo. Sentiment and discussion use mock data; plug in News API, Alpha Vantage, and an LLM for production.
-
 ## Features
 
-- **Advisory panel**: Warren Buffett, Peter Lynch, Ray Dalio, Benjamin Graham, Cathie Wood as distinct agents with their real-world philosophies in the instructions.
+- **Advisory panel**: Warren Buffett, Peter Lynch, Ray Dalio, Benjamin Graham, and Cathie Wood as distinct agents with their real-world philosophies.
 - **Discussion**: Agents discuss pros and cons of a stock; messages stream in for a live feel.
-- **Real-time sentiment**: Gauge and recent headlines (mock; replace with news sentiment API).
+- **Real-time sentiment**: Gauge and recent headlines (mock data; plug in News API for production).
 - **Historical comparison**: Chart of sentiment vs actual return and **outperform rate** — % of periods the stock beat its sentiment-implied return.
+- **Production-ready**: Input validation, structured API errors, accessibility (focus, skip link, ARIA), error boundary, and responsive layout.
 
 ## Run locally
 
-1. Copy `.env.example` to `.env.local` and add your Gemini API key:
+1. Copy `.env.example` to `.env.local` and optionally add your Gemini API key:
+   ```bash
+   cp .env.example .env.local
    ```
-   GEMINI_API_KEY=your-key
-   ```
-   Get a key at [Google AI Studio](https://aistudio.google.com/apikey).
+   Add `GEMINI_API_KEY=your-key` for AI-generated advisor discussions. Get a key at [Google AI Studio](https://aistudio.google.com/apikey). Without it, the app uses mock advisor responses.
+
 2. Install and run:
    ```bash
    npm install
@@ -25,16 +25,29 @@ Built for hackathon demo. Sentiment and discussion use mock data; plug in News A
    ```
 3. Open [http://localhost:3000](http://localhost:3000), enter a ticker (e.g. AAPL), and click **Analyze**.
 
-If `GEMINI_API_KEY` is not set, the app falls back to mock advisor responses.
+## Production build
+
+```bash
+npm run build
+npm start
+```
+
+Set `GEMINI_API_KEY` in your deployment environment for live AI discussions. Sentiment and historical data are currently mocked; see **Extending** below.
 
 ## Stack
 
-- Next.js 14 (App Router), React, TypeScript
+- **Next.js 14** (App Router), React 18, TypeScript
 - Tailwind CSS, Recharts, Lucide icons
-- Mock APIs under `/api/sentiment` and `/api/discussion`
+- APIs: `/api/sentiment`, `/api/discussion` (with validation and error handling)
 
-## Production roadmap
+## Extending for production data
 
-- Wire **News API** (or similar) for real headline sentiment.
-- Use **Alpha Vantage** or **Polygon** for historical prices and returns.
-- Replace mock discussion with **LLM calls** (OpenAI/Anthropic) using each advisor’s `instructions` and current sentiment/performance context.
+- **Headlines & sentiment**: Wire [News API](https://newsapi.org/) or similar; replace `getMockStockSentiment` in `lib/sentiment.ts` and keep the same `StockSentimentSummary` shape.
+- **Prices & returns**: Use [Alpha Vantage](https://www.alphavantage.co/) or [Polygon](https://polygon.io/) for historical prices; compute returns and feed into sentiment comparison.
+- **Discussion**: With `GEMINI_API_KEY` set, the app already uses Gemini for advisor takes; you can switch to another LLM in `lib/gemini-discussion.ts` using each advisor’s `instructions` and the same context format.
+
+## Project structure
+
+- `app/` — Next.js App Router (layout, page, API routes)
+- `components/` — UI (Hero, MetricsCards, DiscussionThread, SentimentGauge, etc.)
+- `lib/` — Advisors, sentiment/discussion logic, validation
