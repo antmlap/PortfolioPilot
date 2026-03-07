@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADVISOR_IDS, type AdvisorForDiscussion, type AdvisorId } from "@/lib/advisors";
+import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from "@/lib/advisors";
 import { generateMockDiscussion } from "@/lib/discussion";
 import { generateDiscussionWithGemini, generateDiscussionWithGeminiFromAdvisors } from "@/lib/gemini-discussion";
 import { getStockSentiment } from "@/lib/sentiment-api";
@@ -18,7 +18,8 @@ function parseAdvisorIds(param: string | null): AdvisorId[] {
 function runDiscussion(
   symbol: string,
   sentimentSummary: StockSentimentSummary,
-  advisors: AdvisorForDiscussion[]
+  advisors: AdvisorForDiscussion[],
+  forUser?: string | null
 ) {
   if (advisors.length === 0) {
     return Promise.resolve([]);
@@ -32,7 +33,8 @@ function runDiscussion(
     return generateDiscussionWithGeminiFromAdvisors(
       symbol,
       sentimentSummary,
-      advisors
+      advisors,
+      { forUser: forUser || undefined }
     ).catch((err) => {
       console.error("Gemini discussion error:", err);
       return generateMockDiscussion(symbol, summary, advisors.map((a) => a.id));
@@ -54,6 +56,7 @@ export async function GET(request: NextRequest) {
     );
   }
   const advisorIds = parseAdvisorIds(request.nextUrl.searchParams.get("advisors"));
+  const forUser = request.nextUrl.searchParams.get("forUser")?.trim() || null;
   try {
     let sentimentSummary: StockSentimentSummary;
     try {
@@ -64,11 +67,11 @@ export async function GET(request: NextRequest) {
 
     if (process.env.GEMINI_API_KEY) {
       try {
-        const messages = await generateDiscussionWithGemini(
-          symbol,
-          sentimentSummary,
-          advisorIds
-        );
+        const advisors: AdvisorForDiscussion[] = advisorIds.map((id) => {
+          const a = ADVISORS[id];
+          return { id: a.id, name: a.name, title: a.title, instructions: a.instructions };
+        });
+        const messages = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
         return NextResponse.json({ symbol, messages });
       } catch (err) {
         console.error("Gemini discussion error:", err);
@@ -95,7 +98,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: { symbol?: string; advisors?: AdvisorForDiscussion[] };
+  let body: { symbol?: string; advisors?: AdvisorForDiscussion[]; forUser?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -115,6 +118,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  const forUser = typeof body.forUser === "string" ? body.forUser.trim() || null : null;
   try {
     let sentimentSummary: StockSentimentSummary;
     try {
@@ -122,7 +126,7 @@ export async function POST(request: NextRequest) {
     } catch {
       sentimentSummary = getMockStockSentiment(symbol);
     }
-    const messages = await runDiscussion(symbol, sentimentSummary, advisors);
+    const messages = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
     return NextResponse.json({ symbol, messages });
   } catch (err) {
     console.error("Discussion API error:", err);

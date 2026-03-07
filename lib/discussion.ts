@@ -48,6 +48,16 @@ const MOCK_CONTENT: Record<AdvisorId, (ctx: MockContext) => string> = {
     `For ${ctx.symbol}, sentiment is ${ctx.sentiment.toFixed(2)} and outperform rate ${ctx.outperformRate}%. Unless there's a clear margin of safety—price well below a conservative estimate of value—I'd be cautious. Check the balance sheet; Mr. Market's mood is not a substitute for that discipline.`,
   wood: (ctx) =>
     `If ${ctx.symbol} is in a space being transformed by innovation, today's valuation may not reflect the 5-year opportunity. With sentiment at ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate, I'm willing to pay for growth when the TAM is expanding and the company has a clear path to capture it.`,
+  munger: (ctx) =>
+    `For ${ctx.symbol}, invert first: what would make this a bad investment? With sentiment ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate, the question is whether the business is wonderful and the price fair. Avoid stupidity; stay in your circle of competence.`,
+  marks: (ctx) =>
+    `Where are we in the cycle for ${ctx.symbol}? Sentiment ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate—second-level thinking says: what is the crowd missing? The best opportunities appear when others are fearful. Control risk and demand a margin of safety.`,
+  bogle: (ctx) =>
+    `For ${ctx.symbol}, ask: does picking this stock beat the market after costs? Sentiment ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate are noise for the long-term holder. Most investors are better off in a low-cost index; if you own this name, keep it simple and disciplined.`,
+  soros: (ctx) =>
+    `The dominant bias around ${ctx.symbol}—sentiment ${ctx.sentiment.toFixed(2)}, ${ctx.outperformRate}% outperform rate—can be reflexive. Perceptions affect fundamentals. Look for inflection points and macro context; size the position by conviction.`,
+  klarman: (ctx) =>
+    `For ${ctx.symbol}, is there a margin of safety? Sentiment ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate suggest how the crowd is positioned. Value is the marriage of contrarian thinking and a calculator; avoid permanent loss of capital.`,
 };
 
 const MOCK_PRO: Record<AdvisorId, boolean> = {
@@ -56,6 +66,11 @@ const MOCK_PRO: Record<AdvisorId, boolean> = {
   dalio: false,
   graham: false,
   wood: true,
+  munger: true,
+  marks: false,
+  bogle: false,
+  soros: true,
+  klarman: false,
 };
 
 const FALLBACK_MOCK = (ctx: MockContext) =>

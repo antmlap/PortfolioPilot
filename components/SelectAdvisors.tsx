@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ADVISORS,
   ADVISOR_IDS,
@@ -8,7 +8,7 @@ import {
   type AdvisorId,
   type CustomAdvisor,
 } from "@/lib/advisors";
-import { ChevronDown, ChevronUp, Plus, UserPlus, Pencil, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, UserPlus, Pencil, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
 const accentBorder: Record<string, string> = {
@@ -17,6 +17,11 @@ const accentBorder: Record<string, string> = {
   dalio: "border-l-accent",
   graham: "border-l-amber-600",
   wood: "border-l-rose-500",
+  munger: "border-l-amber-700",
+  marks: "border-l-slate-600",
+  bogle: "border-l-green-700",
+  soros: "border-l-indigo-600",
+  klarman: "border-l-amber-800",
 };
 
 function getAccentBorder(id: string): string {
@@ -45,7 +50,8 @@ export function SelectAdvisors({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editInstructions, setEditInstructions] = useState("");
-  const [showAddBuiltIn, setShowAddBuiltIn] = useState(false);
+  const [showAddBuiltInDropdown, setShowAddBuiltInDropdown] = useState(false);
+  const addAdvisorDropdownRef = useRef<HTMLDivElement>(null);
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [newCustom, setNewCustom] = useState<CustomAdvisor>(() => ({
     ...CUSTOM_ADVISOR_DEFAULTS,
@@ -120,9 +126,21 @@ export function SelectAdvisors({
   const addBuiltIn = (id: AdvisorId) => {
     if (onSelectionChange && !selectedSet.has(id)) {
       onSelectionChange([...selectedIds, id]);
-      setShowAddBuiltIn(false);
+      setShowAddBuiltInDropdown(false);
     }
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (addAdvisorDropdownRef.current && !addAdvisorDropdownRef.current.contains(e.target as Node)) {
+        setShowAddBuiltInDropdown(false);
+      }
+    };
+    if (showAddBuiltInDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showAddBuiltInDropdown]);
 
   const addCustomAdvisor = () => {
     const name = newCustom.name.trim();
@@ -157,86 +175,70 @@ export function SelectAdvisors({
         new analysis.
       </p>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6" ref={addAdvisorDropdownRef}>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddBuiltInDropdown((v) => !v);
+              setShowAddCustom(false);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-paper border border-border text-sm font-medium text-ink hover:bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
+            aria-haspopup="listbox"
+            aria-expanded={showAddBuiltInDropdown}
+            aria-label="Add pre-made advisor"
+            title={availableBuiltIn.length === 0 ? "All pre-made advisors are already added" : "Choose a pre-made advisor to add"}
+          >
+            <Plus className="w-4 h-4" />
+            Add advisor
+            <ChevronDown className={clsx("w-4 h-4 transition-transform", showAddBuiltInDropdown && "rotate-180")} />
+          </button>
+          {showAddBuiltInDropdown && (
+            <ul
+              role="listbox"
+              className="absolute left-0 top-full z-50 mt-1 min-w-[280px] rounded-lg border-2 border-border bg-paper shadow-lg py-1 max-h-80 overflow-y-auto"
+              aria-label="Pre-made advisors from the real world"
+            >
+              {availableBuiltIn.length === 0 ? (
+                <li className="px-4 py-3 text-sm text-mute">
+                  All pre-made advisors are already added.
+                </li>
+              ) : (
+                availableBuiltIn.map((id) => {
+                  const a = ADVISORS[id];
+                  return (
+                    <li key={a.id} role="option">
+                      <button
+                        type="button"
+                        onClick={() => addBuiltIn(id)}
+                        className={clsx(
+                          "flex items-center gap-3 w-full px-4 py-3 text-left rounded-none transition-colors",
+                          "hover:bg-orange-mute focus:bg-orange-mute focus:outline-none border-l-4 border-transparent",
+                          getAccentBorder(a.id)
+                        )}
+                      >
+                        <span className="text-xl shrink-0">{a.avatar}</span>
+                        <div className="min-w-0">
+                          <div className="font-medium text-ink text-sm">{a.name}</div>
+                          <div className="text-xs text-mute">{a.title} — {a.tagline}</div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          )}
+        </div>
         <button
           type="button"
-          onClick={() => { setShowAddBuiltIn(true); setShowAddCustom(false); }}
-          disabled={availableBuiltIn.length === 0}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-paper border border-border text-sm font-medium text-ink hover:bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus className="w-4 h-4" />
-          Add advisor
-        </button>
-        <button
-          type="button"
-          onClick={() => { setShowAddCustom((v) => !v); setShowAddBuiltIn(false); }}
+          onClick={() => { setShowAddCustom((v) => !v); setShowAddBuiltInDropdown(false); }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-paper border border-border text-sm font-medium text-ink hover:bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
         >
           <UserPlus className="w-4 h-4" />
           Add your own advisor
         </button>
       </div>
-
-      {showAddBuiltIn && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="add-advisor-title"
-          onClick={(e) => e.target === e.currentTarget && setShowAddBuiltIn(false)}
-        >
-          <div
-            className="bg-paper rounded-xl border-2 border-orange shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 id="add-advisor-title" className="font-display text-lg font-semibold text-ink">
-                Select a pre-made advisor
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAddBuiltIn(false)}
-                className="p-2 rounded-md text-mute hover:text-ink hover:bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 overflow-y-auto">
-              {availableBuiltIn.length === 0 ? (
-                <p className="text-mute text-sm py-4 text-center">
-                  All pre-made advisors are already added. Add your own with &quot;Add your own advisor&quot;.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {availableBuiltIn.map((id) => {
-                    const a = ADVISORS[id];
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => addBuiltIn(id)}
-                        className={clsx(
-                          "flex items-start gap-3 p-4 rounded-lg border-2 text-left transition-colors",
-                          "border-border hover:border-accent hover:bg-orange-mute focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent",
-                          getAccentBorder(a.id)
-                        )}
-                      >
-                        <span className="text-2xl shrink-0">{a.avatar}</span>
-                        <div className="min-w-0">
-                          <div className="font-medium text-ink text-sm">{a.name}</div>
-                          <div className="text-xs text-mute mt-0.5">{a.title}</div>
-                          <div className="text-xs text-mute mt-1">{a.tagline}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {showAddCustom && (
         <div className="mb-6 p-4 rounded-lg bg-paper/80 border border-border space-y-3">

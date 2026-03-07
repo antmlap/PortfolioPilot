@@ -7,6 +7,7 @@ export type ThemeId = "uf" | "ucf" | "fsu" | "fau" | "usf";
 const THEME_STORAGE_KEY = "portfolio-pilot-theme";
 const CUSTOM_BG_KEY = "portfolio-pilot-custom-bg";
 const CUSTOM_BOX_KEY = "portfolio-pilot-custom-box";
+const USER_NAME_KEY = "portfolio-pilot-user-name";
 
 const themes: { id: ThemeId; name: string; description: string }[] = [
   { id: "uf", name: "UF", description: "University of Florida — Orange & Blue" },
@@ -25,6 +26,8 @@ type ThemeContextType = {
   setCustomBackground: (value: string | null) => void;
   setCustomBoxColor: (value: string | null) => void;
   clearCustomColors: () => void;
+  userName: string | null;
+  setUserName: (value: string | null) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -42,6 +45,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const [customBackground, setCustomBackgroundState] = useState<string | null>(null);
   const [customBoxColor, setCustomBoxColorState] = useState<string | null>(null);
+  const [userName, setUserNameState] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as ThemeId | null;
@@ -51,6 +55,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const box = localStorage.getItem(CUSTOM_BOX_KEY);
     setCustomBackgroundState(parseHex(bg));
     setCustomBoxColorState(parseHex(box));
+    const name = localStorage.getItem(USER_NAME_KEY);
+    setUserNameState(name && name.trim() ? name.trim() : null);
     setMounted(true);
   }, []);
 
@@ -80,6 +86,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(CUSTOM_BOX_KEY);
   };
 
+  const setUserName = (value: string | null) => {
+    const trimmed = value?.trim() || null;
+    setUserNameState(trimmed);
+    if (trimmed) localStorage.setItem(USER_NAME_KEY, trimmed);
+    else localStorage.removeItem(USER_NAME_KEY);
+  };
+
   const customStyle: React.CSSProperties = mounted
     ? {
         ...(customBackground && { ["--paper" as string]: customBackground }),
@@ -98,6 +111,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setCustomBackground,
         setCustomBoxColor,
         clearCustomColors,
+        userName,
+        setUserName,
       }}
     >
       <div

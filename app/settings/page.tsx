@@ -55,6 +55,8 @@ export default function SettingsPage() {
     setCustomBackground,
     setCustomBoxColor,
     clearCustomColors,
+    userName,
+    setUserName,
   } = useTheme();
 
   return (
@@ -72,7 +74,7 @@ export default function SettingsPage() {
               <img
                 src="/logo.png"
                 alt=""
-                className="h-9 w-auto object-contain [mix-blend-mode:darken]"
+                className="h-9 w-9 rounded-full object-cover [mix-blend-mode:darken]"
                 width={36}
                 height={36}
               />
@@ -98,6 +100,24 @@ export default function SettingsPage() {
           </h1>
           <p className="text-mute mt-1">Customize your experience</p>
         </div>
+
+        <section className="space-y-4">
+          <h2 className="text-sm font-medium text-mute uppercase tracking-wider">
+            Your name
+          </h2>
+          <p className="text-mute text-sm">
+            Advisors will address you by name and tailor their discussion to you.
+          </p>
+          <input
+            type="text"
+            value={userName ?? ""}
+            onChange={(e) => setUserName(e.target.value || null)}
+            placeholder="e.g. Alex"
+            maxLength={50}
+            className="w-full max-w-xs px-3 py-2 rounded-md bg-surface border border-border text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+            aria-label="Your name"
+          />
+        </section>
 
         <section className="space-y-4">
           <h2 className="text-sm font-medium text-mute uppercase tracking-wider">

@@ -100,6 +100,11 @@ const KNOWN_SYMBOLS: Record<string, string> = {
   QQQ: "Invesco QQQ Trust",
 };
 
+/** List of { symbol, name } for autocomplete/suggestions (client-safe). */
+export const SYMBOL_SUGGESTIONS_LIST: { symbol: string; name: string }[] = Object.entries(
+  KNOWN_SYMBOLS
+).map(([sym, name]) => ({ symbol: sym, name }));
+
 function normalizeSymbol(s: string): string {
   return s.trim().toUpperCase();
 }

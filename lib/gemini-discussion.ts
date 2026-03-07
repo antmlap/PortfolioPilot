@@ -42,9 +42,11 @@ function getAdvisorName(advisorId: string, advisors: AdvisorForDiscussion[]): st
 export async function generateDiscussionWithGeminiFromAdvisors(
   symbol: string,
   sentiment: StockSentimentSummary,
-  advisors: AdvisorForDiscussion[]
+  advisors: AdvisorForDiscussion[],
+  options?: { forUser?: string | null }
 ): Promise<DiscussionMessage[]> {
   if (advisors.length === 0) return [];
+  const forUser = options?.forUser?.trim() || null;
   const headlinesSnippet = sentiment.recentHeadlines
     .map((h) => `"${h.text}" (sentiment ${h.score.toFixed(2)})`)
     .join("; ");
@@ -68,12 +70,15 @@ Recent headlines: ${headlinesSnippet}.`;
             .join("\n")
         : "No prior takes yet.";
 
-    const userMessage = `${context}
+    const forUserLine = forUser
+    ? `You are advising ${forUser}. Address your take to them when natural (e.g. "For you, ..." or "In your case, ...") while staying in character. `
+    : "";
+  const userMessage = `${context}
 
 Other advisors' takes so far:
 ${priorTakes}
 
-Give a substantive investment take on ${symbol} using the data above. Be specific to this company—do not give generic advice. Write 4–6 complete sentences. Explain what the headlines, sentiment (${sentiment.currentSentiment.toFixed(2)}), and outperform rate (${sentiment.outperformRate}%) mean for ${symbol} from your investment philosophy. Be insightful: connect the data to your view (moat, growth, risk, margin of safety, disruption, etc.). Use the exact ticker "${symbol}". If you're favorable, say why the data supports that (Pro); if cautious, explain the risks (Con). End your response with exactly "(Pro)" or "(Con)". Do not truncate—finish your thought.`;
+${forUserLine}Give a substantive investment take on ${symbol} using the data above. Be specific to this company—do not give generic advice. Write 4–6 complete sentences. Explain what the headlines, sentiment (${sentiment.currentSentiment.toFixed(2)}), and outperform rate (${sentiment.outperformRate}%) mean for ${symbol} from your investment philosophy. Be insightful: connect the data to your view (moat, growth, risk, margin of safety, disruption, etc.). Use the exact ticker "${symbol}". If you're favorable, say why the data supports that (Pro); if cautious, explain the risks (Con). End your response with exactly "(Pro)" or "(Con)". Do not truncate—finish your thought.`;
 
     const systemInstruction = `You are roleplaying as ${advisor.name}. Follow these instructions exactly:
 

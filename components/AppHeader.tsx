@@ -32,7 +32,7 @@ export function AppHeader({ rightSlot, className }: AppHeaderProps) {
             <img
               src="/logo.png"
               alt=""
-              className="h-9 w-auto object-contain [mix-blend-mode:darken]"
+              className="h-9 w-9 rounded-full object-cover [mix-blend-mode:darken]"
               width={36}
               height={36}
             />

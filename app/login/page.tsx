@@ -20,7 +20,7 @@ export default function LoginPage() {
             <img
               src="/logo.png"
               alt=""
-              className="h-10 w-auto object-contain [mix-blend-mode:darken]"
+              className="h-10 w-10 rounded-full object-cover [mix-blend-mode:darken]"
               width={40}
               height={40}
             />

@@ -71,25 +71,59 @@ function getMockIpos(): BrowseIpo[] {
   });
 }
 
-/** Map Yahoo screener quote to BrowseMover. */
-function screenerQuoteToMover(q: {
-  symbol: string;
-  shortName?: string;
-  longName?: string;
-  regularMarketPrice: number;
-  regularMarketChange: number;
-  regularMarketChangePercent: number;
-}): BrowseMover {
+/** Mock movers when Yahoo screener fails (e.g. rate limit or validation). */
+function getMockMovers(): { topGainers: BrowseMover[]; topLosers: BrowseMover[] } {
+  const gainers: [string, string, number, number][] = [
+    ["NVDA", "NVIDIA Corporation", 128.5, 4.2],
+    ["AAPL", "Apple Inc.", 228.1, 2.1],
+    ["META", "Meta Platforms Inc.", 518.0, 3.5],
+    ["GOOGL", "Alphabet Inc.", 168.2, 1.8],
+    ["AMZN", "Amazon.com Inc.", 198.0, 2.4],
+  ];
+  const losers: [string, string, number, number][] = [
+    ["XYZ", "Example Corp", 12.4, -5.1],
+    ["ABC", "Sample Inc", 8.2, -3.7],
+  ];
   return {
-    symbol: q.symbol,
-    name: q.longName ?? q.shortName ?? q.symbol,
-    price: Math.round(q.regularMarketPrice * 100) / 100,
-    changePercent: Math.round(q.regularMarketChangePercent * 100) / 100,
-    change: Math.round(q.regularMarketChange * 100) / 100,
+    topGainers: gainers.map(([symbol, name, price, pct]) => ({
+      symbol,
+      name,
+      price,
+      changePercent: pct,
+      change: Math.round(price * (pct / 100) * 100) / 100,
+    })),
+    topLosers: losers.map(([symbol, name, price, pct]) => ({
+      symbol,
+      name,
+      price,
+      changePercent: pct,
+      change: Math.round(price * (pct / 100) * 100) / 100,
+    })),
+  };
+}
+
+/** Map Yahoo screener quote to BrowseMover. Handles optional/raw fields. */
+function screenerQuoteToMover(q: Record<string, unknown>): BrowseMover | null {
+  const price = Number((q.regularMarketPrice as number) ?? (q as { regularMarketPrice?: { raw?: number } }).regularMarketPrice?.raw ?? 0);
+  const change = Number((q.regularMarketChange as number) ?? (q as { regularMarketChange?: { raw?: number } }).regularMarketChange?.raw ?? 0);
+  const changePct = Number((q.regularMarketChangePercent as number) ?? (q as { regularMarketChangePercent?: { raw?: number } }).regularMarketChangePercent?.raw ?? 0);
+  const symbol = String(q.symbol ?? "");
+  if (!symbol || Number.isNaN(price)) return null;
+  return {
+    symbol,
+    name: String(q.longName ?? q.shortName ?? symbol),
+    price: Math.round(price * 100) / 100,
+    changePercent: Math.round(changePct * 100) / 100,
+    change: Math.round(change * 100) / 100,
   };
 }
 
 export async function GET() {
+  const baseData: Omit<BrowseData, "topGainers" | "topLosers"> = {
+    upcomingEarnings: getMockEarnings(),
+    upcomingIpos: getMockIpos(),
+  };
+
   try {
     const { default: YahooFinance } = await import("yahoo-finance2");
     const yf = new YahooFinance();
@@ -99,26 +133,27 @@ export async function GET() {
       yf.screener({ scrIds: "day_losers", count: 10 }),
     ]);
 
-    const topGainers: BrowseMover[] = (gainersRes?.quotes ?? []).slice(0, 10).map((q: { symbol: string; shortName?: string; longName?: string; regularMarketPrice: number; regularMarketChange: number; regularMarketChangePercent: number }) =>
-      screenerQuoteToMover(q)
-    );
-    const topLosers: BrowseMover[] = (losersRes?.quotes ?? []).slice(0, 10).map((q: { symbol: string; shortName?: string; longName?: string; regularMarketPrice: number; regularMarketChange: number; regularMarketChangePercent: number }) =>
-      screenerQuoteToMover(q)
-    );
+    const topGainers: BrowseMover[] = (gainersRes?.quotes ?? [])
+      .slice(0, 10)
+      .map((q) => screenerQuoteToMover(q as unknown as Record<string, unknown>))
+      .filter((m): m is BrowseMover => m != null);
+    const topLosers: BrowseMover[] = (losersRes?.quotes ?? [])
+      .slice(0, 10)
+      .map((q) => screenerQuoteToMover(q as unknown as Record<string, unknown>))
+      .filter((m): m is BrowseMover => m != null);
 
-    const data: BrowseData = {
-      upcomingEarnings: getMockEarnings(),
-      upcomingIpos: getMockIpos(),
-      topGainers,
-      topLosers,
-    };
-
-    return NextResponse.json(data);
+    return NextResponse.json({
+      ...baseData,
+      topGainers: topGainers.length > 0 ? topGainers : getMockMovers().topGainers,
+      topLosers: topLosers.length > 0 ? topLosers : getMockMovers().topLosers,
+    });
   } catch (err) {
     console.error("Browse API error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load browse data" },
-      { status: 500 }
-    );
+    const { topGainers, topLosers } = getMockMovers();
+    return NextResponse.json({
+      ...baseData,
+      topGainers,
+      topLosers,
+    });
   }
 }
