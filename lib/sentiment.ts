@@ -34,8 +34,30 @@ export interface StockSentimentSummary {
   currentLevel: SentimentLevel;
   recentHeadlines: { text: string; score: number; date: string }[];
   historical: SentimentVsPerformance[];
-  outperformRate: number; // 0-100, % of periods where stock outperformed sentiment
-  avgOutperformance: number; // avg (actualReturn - expectedFromSentiment)
+  outperformRate: number;
+  avgOutperformance: number;
+  /** Trailing P/E ratio */
+  pe?: number | null;
+  /** Forward P/E */
+  forwardPE?: number | null;
+  /** Market cap (USD) */
+  marketCap?: number | null;
+  /** Beta vs market */
+  beta?: number | null;
+  /** Price position in 52-week range (0–100) */
+  fiftyTwoWeekPct?: number | null;
+  /** 1-month price return % */
+  return1M?: number | null;
+  /** 1-month return vs S&P 500 (percentage points) */
+  vsSpy1M?: number | null;
+  /** Volume today / avg daily volume (e.g. 1.2 = 20% above avg) */
+  volumeVsAvg?: number | null;
+  /** Dividend yield % */
+  dividendYield?: number | null;
+  /** EPS trailing twelve months */
+  eps?: number | null;
+  /** Recent news/developments from Yahoo (headline + date) */
+  newsHeadlines?: { text: string; date: string }[];
 }
 
 const LEVELS: SentimentLevel[] = ["very_bearish", "bearish", "neutral", "bullish", "very_bullish"];
@@ -98,6 +120,17 @@ export function getMockStockSentiment(symbol: string): StockSentimentSummary {
     historical,
     outperformRate,
     avgOutperformance: Math.round(avgOutperformance * 10) / 10,
+    pe: 20 + Math.floor(seed * 30),
+    forwardPE: 18 + Math.floor(seed * 25),
+    marketCap: 50e9 + seed * 500e9,
+    beta: 0.8 + seed * 0.8,
+    fiftyTwoWeekPct: Math.round(30 + seed * 40),
+    return1M: Math.round((seed - 0.4) * 20 * 10) / 10,
+    vsSpy1M: Math.round((seed - 0.5) * 10 * 10) / 10,
+    volumeVsAvg: 0.8 + seed * 0.6,
+    dividendYield: seed < 0.5 ? Math.round(seed * 4 * 1000) / 1000 : null,
+    eps: Math.round((1 + seed * 5) * 10) / 10,
+    newsHeadlines: recentHeadlines.map((h) => ({ text: h.text, date: h.date })),
   };
 }
 

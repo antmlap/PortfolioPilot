@@ -3,9 +3,18 @@ import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
 
 export interface PortfolioContextItem {
   symbol: string;
-  currentSentiment: number;
-  outperformRate: number;
-  avgOutperformance: number;
+  pe?: number | null;
+  forwardPE?: number | null;
+  marketCap?: number | null;
+  beta?: number | null;
+  fiftyTwoWeekPct?: number | null;
+  return1M?: number | null;
+  vsSpy1M?: number | null;
+  volumeVsAvg?: number | null;
+  dividendYield?: number | null;
+  eps?: number | null;
+  currentSentiment?: number | null;
+  newsHeadlines?: { text: string; date: string }[];
   headline?: string;
 }
 
@@ -30,12 +39,26 @@ function buildPortfolioSummary(context: PortfolioContextItem[]): string {
     return "The user has not added any holdings yet. They may be asking for general discussion or sector ideas.";
   }
   return context
-    .map(
-      (c) =>
-        `${c.symbol}: sentiment ${c.currentSentiment.toFixed(2)} (-1 to 1), ` +
-        `outperform rate ${c.outperformRate}%, avg outperformance ${c.avgOutperformance > 0 ? "+" : ""}${c.avgOutperformance}%.` +
-        (c.headline ? ` Recent: ${c.headline}` : "")
-    )
+    .map((c) => {
+      const parts: string[] = [
+        `${c.symbol}:`,
+        c.pe != null ? `P/E ${c.pe}` : "",
+        c.forwardPE != null ? `Forward P/E ${c.forwardPE}` : "",
+        c.beta != null ? `Beta ${c.beta}` : "",
+        c.fiftyTwoWeekPct != null ? `52w position ${c.fiftyTwoWeekPct}%` : "",
+        c.return1M != null ? `1M return ${c.return1M > 0 ? "+" : ""}${c.return1M}%` : "",
+        c.vsSpy1M != null ? `vs S&P 500 (1M) ${c.vsSpy1M > 0 ? "+" : ""}${c.vsSpy1M}%` : "",
+        c.currentSentiment != null ? `Sentiment ${c.currentSentiment.toFixed(2)}` : "",
+        c.volumeVsAvg != null ? `Volume ${(c.volumeVsAvg * 100).toFixed(0)}% of avg` : "",
+        c.dividendYield != null ? `Div yield ${c.dividendYield}%` : "",
+        c.eps != null ? `EPS ${c.eps}` : "",
+      ].filter(Boolean);
+      const news = (c.newsHeadlines ?? [])
+        .slice(0, 3)
+        .map((n) => n.text)
+        .join(" | ");
+      return parts.join(", ") + (news ? `. Recent news: ${news}` : c.headline ? `. ${c.headline}` : "");
+    })
     .join("\n");
 }
 

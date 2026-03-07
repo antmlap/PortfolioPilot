@@ -491,6 +491,11 @@ function HomeContent() {
           {!error && loading && <MetricsSkeleton />}
           {!error && sentiment && (
             <MetricsCards
+              pe={sentiment.pe}
+              beta={sentiment.beta}
+              fiftyTwoWeekPct={sentiment.fiftyTwoWeekPct}
+              return1M={sentiment.return1M}
+              vsSpy1M={sentiment.vsSpy1M}
               outperformRate={sentiment.outperformRate}
               avgOutperformance={sentiment.avgOutperformance}
               currentSentiment={sentiment.currentSentiment}
@@ -530,14 +535,12 @@ function HomeContent() {
               {!loading && sentiment && (
                 <>
                   <section className="rounded-lg border-2 border-orange bg-orange-mute p-6">
-                    <h2 className="text-xs font-medium text-mute uppercase tracking-wider mb-4">
-                      Real-time sentiment
-                    </h2>
                     <SentimentGauge
                       score={sentiment.currentSentiment}
                       level={sentiment.currentLevel}
-                      label="News sentiment"
+                      label="Momentum (sentiment)"
                     />
+                    <p className="text-xs text-mute mt-2">From price data: 1-day, 1M return, 52w position</p>
                   </section>
                   <section className="rounded-lg border-2 border-orange bg-orange-mute p-6">
                     <HeadlinesFeed headlines={sentiment.recentHeadlines} />

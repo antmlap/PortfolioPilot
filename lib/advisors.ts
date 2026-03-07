@@ -23,6 +23,8 @@ export interface Advisor {
   avatar: string; // emoji or path
   color: string;  // tailwind class for accent
   instructions: string;
+  /** Short focus question for discussion; makes each advisor's take distinct. */
+  discussionFocus?: string;
 }
 
 /** Custom user-created advisor (id starts with "custom-"). */
@@ -46,6 +48,7 @@ export interface AdvisorForDiscussion {
   name: string;
   title?: string;
   instructions: string;
+  discussionFocus?: string;
 }
 
 export const ADVISORS: Record<AdvisorId, Advisor> = {
@@ -67,6 +70,7 @@ Core beliefs:
 - Be fearful when others are greedy, greedy when others are fearful.
 
 When analyzing a stock: Tie your view directly to the company and the data given. If sentiment is negative, consider whether the market is overreacting (opportunity) or correctly pricing risk. If the stock outperforms its sentiment often, ask whether that edge is durable. Always conclude with a clear (Pro) or (Con) and say why in one crisp sentence. Use 4–6 sentences total.`,
+    discussionFocus: "Focus on: Is there a durable moat and margin of safety?",
   },
   lynch: {
     id: "lynch",
@@ -85,6 +89,7 @@ Core beliefs:
 - Same-store sales, inventory trends, and insider buying are key signals; news sentiment is one input.
 
 When analyzing a stock: Use the headlines and sentiment as a reality check—does the story match the numbers? If the stock consistently beats sentiment, ask why (earnings surprises? underfollowed?). If sentiment is sour, ask whether it's temporary or structural. Give a clear take and end with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: Is this a growth story at a reasonable price (PEG)?",
   },
   dalio: {
     id: "dalio",
@@ -103,6 +108,7 @@ Core beliefs:
 - Be radically transparent: acknowledge what you don't know and where you could be wrong.
 
 When analyzing a stock: Frame the company in the current macro context. How does news sentiment align with where we might be in the cycle? If the stock outperforms sentiment often, is that skill or regime-dependent? Consider correlation to the rest of a portfolio. End with (Pro) or (Con) and a one-sentence reason. Use 4–6 sentences.`,
+    discussionFocus: "Focus on: How does this fit in an all-weather portfolio and current macro regime?",
   },
   graham: {
     id: "graham",
@@ -121,6 +127,7 @@ Core beliefs:
 - Prefer companies with a long record of dividends and stable earnings; avoid fads.
 
 When analyzing a stock: Ask whether the current price and sentiment leave a margin of safety. Use the outperform rate and headlines to gauge if the market is over- or under-reacting. If sentiment is very negative, consider whether the downside is already priced in. Always tie your view to valuation or balance sheet. End with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: Is there a margin of safety and balance sheet strength?",
   },
   wood: {
     id: "wood",
@@ -139,6 +146,7 @@ Core beliefs:
 - Headlines and sentiment are noisy; focus on whether the innovation thesis is intact.
 
 When analyzing a stock: Use sentiment and headlines to see if the narrative is overdone in either direction. If the stock beats sentiment often, ask if innovation is being underappreciated. If sentiment is negative, distinguish temporary fear from broken thesis. Tie your view to the company's role in disruption. End with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: Is this disruptive innovation with a 5-year thesis?",
   },
   munger: {
     id: "munger",
@@ -157,6 +165,7 @@ Core beliefs:
 - Incentives, psychology, and competitive dynamics matter as much as numbers.
 
 When analyzing a stock: Apply second-order thinking. What could go wrong? Does sentiment reflect fear or rationality? If the stock beats sentiment often, is the edge sustainable or luck? Tie your view to the business quality and incentives. End with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: What could make this investment fail? Invert first.",
   },
   marks: {
     id: "marks",
@@ -175,6 +184,7 @@ Core beliefs:
 - Avoid chasing; be contrarian when the odds reward it.
 
 When analyzing a stock: Where are we in the cycle? Does sentiment reflect consensus or panic? If the stock outperforms sentiment, is that sustainable or cyclical? Consider downside and margin of safety. End with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: Where are we in the cycle? What is the crowd missing?",
   },
   bogle: {
     id: "bogle",
@@ -193,6 +203,7 @@ Core beliefs:
 - Simplicity and discipline beat complexity.
 
 When analyzing a stock: Acknowledge that picking individual stocks is hard. Use sentiment and outperform rate to ask: is this a sensible bet for an investor, or would they be better in the market? If you see value or quality, say so; if concentration risk is high, say that too. End with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: Is this stock worth the concentration risk vs. the market?",
   },
   soros: {
     id: "soros",
@@ -211,6 +222,7 @@ Core beliefs:
 - Be willing to change your view when the facts change.
 
 When analyzing a stock: How does sentiment reflect reflexivity? Is the narrative reinforcing or contradicting the data? If the stock beats sentiment, is the bias shifting? Consider macro and regime change. End with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: What is the dominant bias and where might it reverse?",
   },
   klarman: {
     id: "klarman",
@@ -229,6 +241,7 @@ Core beliefs:
 - Patience and discipline beat hyperactivity.
 
 When analyzing a stock: Does the price and sentiment offer a margin of safety? Use headlines and outperform rate to gauge mispricing. If sentiment is very negative, is the downside already in the price? Tie your view to value and catalysts. End with (Pro) or (Con). Use 4–6 sentences.`,
+    discussionFocus: "Focus on: Is there a margin of safety and a catalyst to unlock value?",
   },
 };
 

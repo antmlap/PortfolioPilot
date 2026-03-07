@@ -33,7 +33,7 @@ export function SentimentChart({ data, className }: SentimentChartProps) {
   return (
     <div className={className}>
       <p className="text-xs text-mute mb-2 font-mono">
-        Historical: sentiment vs actual return (green = outperformed)
+        Each point: trailing 1M return (sentiment proxy, -1 to +1) vs forward 1M return (actual). &quot;Outperformed&quot; = actual return beat expected (expected = sentiment × 8). Chart shows actual return.
       </p>
       <div className="h-[180px] w-full">
         <ResponsiveContainer width="100%" height="100%">

@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       try {
         const advisors: AdvisorForDiscussion[] = advisorIds.map((id) => {
           const a = ADVISORS[id];
-          return { id: a.id, name: a.name, title: a.title, instructions: a.instructions };
+          return { id: a.id, name: a.name, title: a.title, instructions: a.instructions, discussionFocus: a.discussionFocus };
         });
         const messages = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
         return NextResponse.json({ symbol, messages });

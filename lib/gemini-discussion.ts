@@ -47,14 +47,25 @@ export async function generateDiscussionWithGeminiFromAdvisors(
 ): Promise<DiscussionMessage[]> {
   if (advisors.length === 0) return [];
   const forUser = options?.forUser?.trim() || null;
-  const headlinesSnippet = sentiment.recentHeadlines
-    .map((h) => `"${h.text}" (sentiment ${h.score.toFixed(2)})`)
-    .join("; ");
+
+  const metricParts: string[] = [
+    sentiment.pe != null ? `P/E (trailing): ${sentiment.pe}` : "",
+    sentiment.forwardPE != null ? `Forward P/E: ${sentiment.forwardPE}` : "",
+    sentiment.beta != null ? `Beta: ${sentiment.beta}` : "",
+    sentiment.fiftyTwoWeekPct != null ? `52-week range position: ${sentiment.fiftyTwoWeekPct}%` : "",
+    sentiment.return1M != null ? `1-month return: ${sentiment.return1M > 0 ? "+" : ""}${sentiment.return1M}%` : "",
+    sentiment.vsSpy1M != null ? `1-month return vs S&P 500: ${sentiment.vsSpy1M > 0 ? "+" : ""}${sentiment.vsSpy1M}%` : "",
+    sentiment.volumeVsAvg != null ? `Volume vs 3-month avg: ${(sentiment.volumeVsAvg * 100).toFixed(0)}%` : "",
+    sentiment.dividendYield != null ? `Dividend yield: ${sentiment.dividendYield}%` : "",
+    sentiment.eps != null ? `EPS (TTM): ${sentiment.eps}` : "",
+  ].filter(Boolean);
+  const newsLines = sentiment.newsHeadlines?.map((n) => n.text) ?? sentiment.recentHeadlines?.map((h) => h.text) ?? [];
+  const newsSnippet = newsLines.slice(0, 5).join(" | ");
+  const sentimentLine = `Market sentiment (momentum): ${sentiment.currentSentiment.toFixed(2)} (scale -1 bearish to +1 bullish, from price data).`;
   const context = `Stock: ${symbol}.
-Current news sentiment score: ${sentiment.currentSentiment.toFixed(2)} (scale -1 to 1).
-Historical outperform rate: ${sentiment.outperformRate}% of periods the stock beat its sentiment-implied return.
-Average outperformance vs sentiment: ${sentiment.avgOutperformance}%.
-Recent headlines: ${headlinesSnippet}.`;
+${sentimentLine}
+${metricParts.length > 0 ? `Key metrics: ${metricParts.join("; ")}.` : ""}
+${newsSnippet ? `Recent news/developments: ${newsSnippet}.` : ""}`;
 
   const messages: DiscussionMessage[] = [];
 
@@ -71,20 +82,23 @@ Recent headlines: ${headlinesSnippet}.`;
         : "No prior takes yet.";
 
     const forUserLine = forUser
-    ? `You are advising ${forUser}. Address your take to them when natural (e.g. "For you, ..." or "In your case, ...") while staying in character. `
-    : "";
-  const userMessage = `${context}
+      ? `You are advising ${forUser}. Address your take to them when natural. `
+      : "";
+    const focusLine = advisor.discussionFocus ?? "Focus on: What does the data mean for this company from your philosophy?";
+    const userMessage = `${context}
 
 Other advisors' takes so far:
 ${priorTakes}
 
-${forUserLine}Give a substantive discussion take on ${symbol} using the data above. Be specific to this company—do not give generic recommendations. Write 4–6 complete sentences. Explain what the headlines, sentiment (${sentiment.currentSentiment.toFixed(2)}), and outperform rate (${sentiment.outperformRate}%) mean for ${symbol} from your investment philosophy. Be insightful: connect the data to your view (moat, growth, risk, margin of safety, disruption, etc.). Use the exact ticker "${symbol}". If you're favorable, say why the data supports that (Pro); if cautious, explain the risks (Con). End your response with exactly "(Pro)" or "(Con)". Do not truncate—finish your thought.`;
+${forUserLine}Your angle: ${focusLine}
 
-    const systemInstruction = `You are roleplaying as ${advisor.name}. Follow these instructions exactly:
+Give a substantive take in 4–6 sentences. Use your angle above; do not just repeat the same points as other advisors. Emphasize your own lens (e.g. moat, growth, margin of safety, macro, disruption). Tie your view to the data and end with exactly "(Pro)" or "(Con)". Use the ticker "${symbol}".`;
+
+    const systemInstruction = `You are ${advisor.name}. Follow these instructions:
 
 ${advisor.instructions}
 
-Critical: The stock is ${symbol}. Give a complete, insightful take (4–6 sentences). Explain what the data means for this stock from your philosophy—don't just list numbers. If you choose Pro, your reasoning should support being favorable; if Con, explain the risks. Use only the ticker "${symbol}". Write in full sentences and do not cut off mid-thought.`;
+Stock: ${symbol}. Give a complete take (4–6 sentences) from your philosophy. End with "(Pro)" or "(Con)".`;
 
     try {
       const response = await ai.models.generateContent({
@@ -125,7 +139,7 @@ export async function generateDiscussionWithGemini(
 ): Promise<DiscussionMessage[]> {
   const advisors: AdvisorForDiscussion[] = advisorIds.map((id) => {
     const a = ADVISORS[id];
-    return { id: a.id, name: a.name, title: a.title, instructions: a.instructions };
+    return { id: a.id, name: a.name, title: a.title, instructions: a.instructions, discussionFocus: a.discussionFocus };
   });
   return generateDiscussionWithGeminiFromAdvisors(symbol, sentiment, advisors);
 }

@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { AppHeader } from "@/components/AppHeader";
-import { SentimentGauge } from "@/components/SentimentGauge";
 import type { StockSentimentSummary } from "@/lib/sentiment";
+import { SentimentGauge } from "@/components/SentimentGauge";
 import { ADVISORS, ADVISOR_IDS } from "@/lib/advisors";
 import { Loader2, Plus, MessageSquare, Send, Trash2, ChevronDown, Check } from "lucide-react";
 import clsx from "clsx";
@@ -190,7 +190,7 @@ export default function PortfolioPage() {
           </h2>
           {holdings.length === 0 && !addingSymbol && (
             <p className="text-mute text-sm py-8 text-center">
-              Add a ticker above to see sentiment and performance.
+              Add a ticker above to see P/E, Beta, 52-week range, returns, and news.
             </p>
           )}
           {(holdings.length > 0 || addingSymbol) && (
@@ -199,9 +199,12 @@ export default function PortfolioPage() {
                 <thead>
                   <tr className="border-b border-border text-left text-mute uppercase tracking-wider text-xs">
                     <th className="pb-3 pr-4 font-semibold">Symbol</th>
-                    <th className="pb-3 pr-4 font-semibold">Sentiment</th>
-                    <th className="pb-3 pr-4 font-semibold">Outperform rate</th>
-                    <th className="pb-3 pr-4 font-semibold">Avg outperformance</th>
+                    <th className="pb-3 pr-4 font-semibold w-24">Sentiment</th>
+                    <th className="pb-3 pr-4 font-semibold">P/E</th>
+                    <th className="pb-3 pr-4 font-semibold">Beta</th>
+                    <th className="pb-3 pr-4 font-semibold">52w%</th>
+                    <th className="pb-3 pr-4 font-semibold">1M return</th>
+                    <th className="pb-3 pr-4 font-semibold">vs S&P</th>
                     <th className="pb-3 pr-4 font-semibold">Recent</th>
                     <th className="pb-3 w-10 font-semibold"></th>
                   </tr>
@@ -210,7 +213,7 @@ export default function PortfolioPage() {
                   {addingSymbol && !holdings.some((h) => h.symbol === addingSymbol) && (
                     <tr className="border-b border-border">
                       <td className="py-3 pr-4 font-mono font-semibold text-ink">{addingSymbol}</td>
-                      <td colSpan={4} className="py-3 pr-4 text-mute flex items-center gap-2">
+                      <td colSpan={7} className="py-3 pr-4 text-mute flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
                         Loading…
                       </td>
@@ -220,26 +223,42 @@ export default function PortfolioPage() {
                   {holdings.map((h) => (
                     <tr key={h.symbol} className="border-b border-border">
                       <td className="py-3 pr-4 font-mono font-semibold text-ink">{h.symbol}</td>
-                      <td className="py-3 pr-4">
-                        <div className="w-28">
-                          <SentimentGauge
-                            score={h.currentSentiment}
-                            level={h.currentLevel}
-                            label=""
-                          />
-                        </div>
+                      <td className="py-3 pr-4 w-24" title="Momentum score from price data (-1 to +1)">
+                        {h.currentSentiment != null && h.currentLevel != null ? (
+                          <div className="w-20">
+                            <SentimentGauge score={h.currentSentiment} level={h.currentLevel} label="" />
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </td>
-                      <td className="py-3 pr-4 text-ink font-mono">{h.outperformRate}%</td>
+                      <td className="py-3 pr-4 text-ink font-mono">{h.pe != null ? h.pe.toFixed(1) : "—"}</td>
+                      <td className="py-3 pr-4 text-ink font-mono">{h.beta != null ? h.beta.toFixed(2) : "—"}</td>
+                      <td className="py-3 pr-4">
+                        {h.fiftyTwoWeekPct != null ? (
+                          <span className="font-mono" title="Position in 52-week range">{h.fiftyTwoWeekPct}%</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td
                         className={clsx(
                           "py-3 pr-4 font-mono",
-                          h.avgOutperformance >= 0 ? "text-positive" : "text-negative"
+                          (h.return1M ?? 0) >= 0 ? "text-positive" : "text-negative"
                         )}
                       >
-                        {h.avgOutperformance > 0 ? "+" : ""}{h.avgOutperformance}%
+                        {h.return1M != null ? `${h.return1M > 0 ? "+" : ""}${h.return1M}%` : "—"}
                       </td>
-                      <td className="py-3 pr-4 text-mute max-w-[200px] truncate" title={h.recentHeadlines[0]?.text}>
-                        {h.recentHeadlines[0]?.text ?? "—"}
+                      <td
+                        className={clsx(
+                          "py-3 pr-4 font-mono",
+                          (h.vsSpy1M ?? 0) >= 0 ? "text-positive" : "text-negative"
+                        )}
+                      >
+                        {h.vsSpy1M != null ? `${h.vsSpy1M > 0 ? "+" : ""}${h.vsSpy1M}%` : "—"}
+                      </td>
+                      <td className="py-3 pr-4 text-mute max-w-[220px] truncate" title={(h.newsHeadlines?.[0]?.text ?? h.recentHeadlines[0]?.text) ?? ""}>
+                        {h.newsHeadlines?.[0]?.text ?? h.recentHeadlines[0]?.text ?? "—"}
                       </td>
                       <td className="py-3">
                         <button

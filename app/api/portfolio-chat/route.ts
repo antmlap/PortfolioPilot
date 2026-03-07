@@ -28,9 +28,18 @@ export async function POST(request: NextRequest) {
       const summary = await getStockSentiment(symbol);
       return {
         symbol: summary.symbol,
+        pe: summary.pe,
+        forwardPE: summary.forwardPE,
+        marketCap: summary.marketCap,
+        beta: summary.beta,
+        fiftyTwoWeekPct: summary.fiftyTwoWeekPct,
+        return1M: summary.return1M,
+        vsSpy1M: summary.vsSpy1M,
+        volumeVsAvg: summary.volumeVsAvg,
+        dividendYield: summary.dividendYield,
+        eps: summary.eps,
         currentSentiment: summary.currentSentiment,
-        outperformRate: summary.outperformRate,
-        avgOutperformance: summary.avgOutperformance,
+        newsHeadlines: summary.newsHeadlines,
         headline: summary.recentHeadlines[0]?.text,
       };
     })

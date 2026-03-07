@@ -3,48 +3,48 @@
 import { BarChart3, Percent, TrendingUp } from "lucide-react";
 
 interface MetricsCardsProps {
-  outperformRate: number;
-  avgOutperformance: number;
-  currentSentiment: number;
+  /** Legacy; used when new metrics not provided */
+  outperformRate?: number;
+  avgOutperformance?: number;
+  currentSentiment?: number;
+  pe?: number | null;
+  beta?: number | null;
+  fiftyTwoWeekPct?: number | null;
+  return1M?: number | null;
+  vsSpy1M?: number | null;
   className?: string;
 }
 
 export function MetricsCards({
-  outperformRate,
-  avgOutperformance,
-  currentSentiment,
+  outperformRate = 50,
+  avgOutperformance = 0,
+  currentSentiment = 0,
+  pe,
+  beta,
+  fiftyTwoWeekPct,
+  return1M,
+  vsSpy1M,
   className,
 }: MetricsCardsProps) {
-  const cards = [
-    {
-      label: "Outperform rate",
-      value: `${outperformRate}%`,
-      sub: "of periods beat sentiment",
-      icon: Percent,
-      color: "text-accent",
-      bg: "bg-accent-mute",
-    },
-    {
-      label: "Avg outperformance",
-      value: `${avgOutperformance > 0 ? "+" : ""}${avgOutperformance}%`,
-      sub: "vs sentiment-implied return",
-      icon: BarChart3,
-      color: avgOutperformance >= 0 ? "text-positive" : "text-negative",
-      bg: avgOutperformance >= 0 ? "bg-green-50" : "bg-red-50",
-    },
-    {
-      label: "Current sentiment",
-      value: currentSentiment.toFixed(2),
-      sub: "score (-1 to +1)",
-      icon: TrendingUp,
-      color: "text-orange",
-      bg: "bg-orange-mute",
-    },
-  ];
+  const useNewMetrics = pe != null || beta != null || return1M != null || vsSpy1M != null;
+
+  const cards = useNewMetrics
+    ? [
+        pe != null && { label: "P/E", value: pe.toFixed(1), sub: "Trailing", icon: BarChart3, color: "text-accent" as const, bg: "bg-accent-mute" as const },
+        beta != null && { label: "Beta", value: beta.toFixed(2), sub: "vs market", icon: TrendingUp, color: "text-orange" as const, bg: "bg-orange-mute" as const },
+        fiftyTwoWeekPct != null && { label: "52w range", value: `${fiftyTwoWeekPct}%`, sub: "Position in range", icon: Percent, color: "text-accent" as const, bg: "bg-accent-mute" as const },
+        return1M != null && { label: "1M return", value: `${return1M > 0 ? "+" : ""}${return1M}%`, sub: "Price return", icon: TrendingUp, color: return1M >= 0 ? "text-positive" : "text-negative", bg: return1M >= 0 ? "bg-green-50" : "bg-red-50" },
+        vsSpy1M != null && { label: "vs S&P 500", value: `${vsSpy1M > 0 ? "+" : ""}${vsSpy1M}%`, sub: "1M relative", icon: BarChart3, color: vsSpy1M >= 0 ? "text-positive" : "text-negative", bg: vsSpy1M >= 0 ? "bg-green-50" : "bg-red-50" },
+      ].filter(Boolean) as { label: string; value: string; sub: string; icon: typeof BarChart3; color: string; bg: string }[]
+    : [
+        { label: "Outperform rate", value: `${outperformRate}%`, sub: "of periods beat sentiment", icon: Percent, color: "text-accent", bg: "bg-accent-mute" },
+        { label: "Avg outperformance", value: `${avgOutperformance > 0 ? "+" : ""}${avgOutperformance}%`, sub: "vs sentiment-implied return", icon: BarChart3, color: avgOutperformance >= 0 ? "text-positive" : "text-negative", bg: avgOutperformance >= 0 ? "bg-green-50" : "bg-red-50" },
+        { label: "Current sentiment", value: currentSentiment.toFixed(2), sub: "score (-1 to +1)", icon: TrendingUp, color: "text-orange", bg: "bg-orange-mute" },
+      ];
 
   return (
     <div className={className} role="region" aria-label="Stock metrics">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${cards.length === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"}`}>
         {cards.map((c) => (
           <div
             key={c.label}
