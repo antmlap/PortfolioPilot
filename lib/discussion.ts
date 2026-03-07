@@ -22,17 +22,32 @@ export interface DiscussionState {
   status: "idle" | "discussing" | "done";
 }
 
-const MOCK_CONTENT: Record<AdvisorId, (symbol: string) => string> = {
-  buffett: (symbol) =>
-    `I'd look at ${symbol} the same way I look at any business: does it have a durable moat and predictable earnings? If the numbers show consistent returns on equity and a sensible price relative to that, it could be a candidate for the portfolio. I'm not interested in what the news says this week—I care about where the business will be in 10 years.`,
-  lynch: (symbol) =>
-    `The key is whether ${symbol} is a growth story that's still reasonably priced. Check the PEG ratio and same-store sales or equivalent. If you've seen the product or service in your daily life and it's winning, that's a good start. Sentiment can be noisy—focus on whether the fundamentals support the narrative.`,
-  dalio: (symbol) =>
-    `Where does ${symbol} sit in the economic cycle and in a diversified portfolio? If it's highly correlated to growth and risk-on sentiment, you need to size it so that a drawdown doesn't blow up your plan. I'd want to see how it behaves in different macro regimes before committing.`,
-  graham: (symbol) =>
-    `Unless there's a clear margin of safety—meaning the price is well below a conservative estimate of value—I'd be cautious. Check the balance sheet: debt levels, current ratio, and whether earnings are stable. Mr. Market's current mood (sentiment) is not a substitute for that discipline.`,
-  wood: (symbol) =>
-    `If ${symbol} is in a space that's being transformed by innovation—whether AI, genomics, or automation—today's valuation might not reflect the 5-year opportunity. I'm willing to pay for growth when the TAM is expanding and the company has a clear path to capture it. Short-term sentiment often underweights disruption.`,
+type MockContext = {
+  symbol: string;
+  sentiment: number;
+  outperformRate: number;
+  headline?: string;
+};
+
+const MOCK_CONTENT: Record<AdvisorId, (ctx: MockContext) => string> = {
+  buffett: (ctx) => {
+    const lead = ctx.headline
+      ? `Given the recent news that ${ctx.headline}, I'd still look at ${ctx.symbol} the same way I look at any business: `
+      : `I'd look at ${ctx.symbol} the same way I look at any business: `;
+    return `${lead}does it have a durable moat and predictable earnings? With sentiment around ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate, the key is whether the numbers show consistent returns on equity and a sensible price. I care about where the business will be in 10 years.`;
+  },
+  lynch: (ctx) => {
+    const lead = ctx.headline
+      ? `The recent headline about ${ctx.symbol}—"${ctx.headline.slice(0, 50)}${ctx.headline.length > 50 ? "…" : ""}"—is noise unless the growth story is still reasonably priced. `
+      : "";
+    return `${lead}The key is whether ${ctx.symbol} is a growth story that's still reasonably priced. Sentiment at ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate: check the PEG and whether the fundamentals support the narrative.`;
+  },
+  dalio: (ctx) =>
+    `Where does ${ctx.symbol} sit in the economic cycle? With sentiment ${ctx.sentiment.toFixed(2)} and a ${ctx.outperformRate}% outperform rate, I'd want to see how it behaves in different macro regimes. Size it so a drawdown doesn't blow up your plan.`,
+  graham: (ctx) =>
+    `For ${ctx.symbol}, sentiment is ${ctx.sentiment.toFixed(2)} and outperform rate ${ctx.outperformRate}%. Unless there's a clear margin of safety—price well below a conservative estimate of value—I'd be cautious. Check the balance sheet; Mr. Market's mood is not a substitute for that discipline.`,
+  wood: (ctx) =>
+    `If ${ctx.symbol} is in a space being transformed by innovation, today's valuation may not reflect the 5-year opportunity. With sentiment at ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate, I'm willing to pay for growth when the TAM is expanding and the company has a clear path to capture it.`,
 };
 
 const MOCK_PRO: Record<AdvisorId, boolean> = {
@@ -43,15 +58,22 @@ const MOCK_PRO: Record<AdvisorId, boolean> = {
   wood: true,
 };
 
-const FALLBACK_MOCK = (symbol: string) =>
-  `Considering ${symbol}, I'd weigh the fundamentals and current sentiment. Diversification and a margin of safety matter.`;
+const FALLBACK_MOCK = (ctx: MockContext) =>
+  `Considering ${ctx.symbol} with sentiment ${ctx.sentiment.toFixed(2)} and ${ctx.outperformRate}% outperform rate, I'd weigh the fundamentals. Diversification and a margin of safety matter.`;
 
-/** Mock discussion for hackathon. Replace with LLM calls using advisor instructions + context. */
+/** Mock discussion when Gemini is unavailable. Uses sentiment/headlines so each stock gets different text. */
 export function generateMockDiscussion(
   symbol: string,
-  sentimentSummary: { currentSentiment: number; outperformRate: number },
+  sentimentSummary: { currentSentiment: number; outperformRate: number; recentHeadlines?: { text: string }[] },
   advisorIds: string[] = ADVISOR_IDS
 ): DiscussionMessage[] {
+  const headline = sentimentSummary.recentHeadlines?.[0]?.text;
+  const ctx: MockContext = {
+    symbol,
+    sentiment: sentimentSummary.currentSentiment,
+    outperformRate: sentimentSummary.outperformRate,
+    headline,
+  };
   const ts = () => new Date().toISOString();
   return advisorIds.map((advisorId, i) => {
     const contentFn = MOCK_CONTENT[advisorId as AdvisorId];
@@ -60,7 +82,7 @@ export function generateMockDiscussion(
       id: String(i + 1),
       advisorId,
       role: "advisor" as const,
-      content: contentFn ? contentFn(symbol) : FALLBACK_MOCK(symbol),
+      content: contentFn ? contentFn(ctx) : FALLBACK_MOCK(ctx),
       timestamp: ts(),
       isPro: typeof isPro === "boolean" ? isPro : true,
     };

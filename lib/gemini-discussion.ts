@@ -3,7 +3,7 @@ import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from
 import type { DiscussionMessage } from "./discussion";
 import type { StockSentimentSummary } from "./sentiment";
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY ?? "",
 });
@@ -28,10 +28,8 @@ function parseProCon(text: string): { content: string; isPro: boolean } {
 }
 
 function extractText(response: unknown): string {
-  if (typeof (response as { text?: string }).text === "string") {
-    return (response as { text: string }).text;
-  }
-  const r = response as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const r = response as { text?: string; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  if (typeof r.text === "string" && r.text.trim()) return r.text;
   const part = r.candidates?.[0]?.content?.parts?.[0];
   return (part?.text as string) ?? "";
 }
@@ -75,21 +73,21 @@ Recent headlines: ${headlinesSnippet}.`;
 Other advisors' takes so far:
 ${priorTakes}
 
-Give your brief investment take on ${symbol} in 2-4 sentences, from your usual perspective. Say whether you're generally favorable (Pro) or cautious (Con) and why. End your response with exactly "(Pro)" or "(Con)".`;
+Give a substantive investment take on ${symbol} using the data above. Be specific to this company—do not give generic advice. Write 4–6 complete sentences. Explain what the headlines, sentiment (${sentiment.currentSentiment.toFixed(2)}), and outperform rate (${sentiment.outperformRate}%) mean for ${symbol} from your investment philosophy. Be insightful: connect the data to your view (moat, growth, risk, margin of safety, disruption, etc.). Use the exact ticker "${symbol}". If you're favorable, say why the data supports that (Pro); if cautious, explain the risks (Con). End your response with exactly "(Pro)" or "(Con)". Do not truncate—finish your thought.`;
 
-    const fullPrompt = `You are roleplaying as ${advisor.name}. Follow these instructions exactly:
+    const systemInstruction = `You are roleplaying as ${advisor.name}. Follow these instructions exactly:
 
 ${advisor.instructions}
 
----
-${userMessage}`;
+Critical: The stock is ${symbol}. Give a complete, insightful take (4–6 sentences). Explain what the data means for this stock from your philosophy—don't just list numbers. If you choose Pro, your reasoning should support being favorable; if Con, explain the risks. Use only the ticker "${symbol}". Write in full sentences and do not cut off mid-thought.`;
 
     try {
       const response = await ai.models.generateContent({
         model: GEMINI_MODEL,
-        contents: fullPrompt,
+        contents: [{ role: "user", parts: [{ text: userMessage }] }],
         config: {
-          maxOutputTokens: 256,
+          systemInstruction,
+          maxOutputTokens: 512,
           temperature: 0.7,
         },
       });

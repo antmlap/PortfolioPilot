@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Loader2 } from "lucide-react";
 import { DiscussionThread } from "@/components/DiscussionThread";
@@ -35,6 +35,7 @@ function HomeContent() {
   const [loading, setLoading] = useState(false);
   const [discussing, setDiscussing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fetchIdRef = useRef(0);
 
   const getErrorFromRes = async (res: Response, fallback: string) => {
     try {
@@ -70,8 +71,12 @@ function HomeContent() {
   }, [selectedAdvisorIds, customAdvisors, instructionOverrides]);
 
   const fetchData = useCallback(async (sym: string) => {
+    fetchIdRef.current += 1;
+    const thisFetchId = fetchIdRef.current;
     setLoading(true);
     setError(null);
+    setDiscussion([]);
+    setDiscussing(true);
     const advisorsForDiscussion = buildAdvisorsForDiscussion();
     const usePost = customAdvisors.length > 0 || Object.keys(instructionOverrides).length > 0;
     try {
@@ -93,6 +98,7 @@ function HomeContent() {
               )
             ),
       ]);
+      if (thisFetchId !== fetchIdRef.current) return;
       if (!sentRes.ok) {
         throw new Error(
           await getErrorFromRes(sentRes, "Failed to load sentiment")
@@ -107,21 +113,21 @@ function HomeContent() {
         sentRes.json(),
         discRes.json(),
       ]);
+      if (thisFetchId !== fetchIdRef.current) return;
       setSentiment(sentJson);
-      setDiscussion([]);
-      setDiscussing(true);
-      for (let i = 0; i < discJson.messages.length; i++) {
-        await new Promise((r) => setTimeout(r, 600));
-        setDiscussion((prev) => [...prev, discJson.messages[i]]);
-      }
+      const messages = Array.isArray(discJson.messages) ? discJson.messages : [];
+      setDiscussion(messages);
       setDiscussing(false);
     } catch (e) {
+      if (thisFetchId !== fetchIdRef.current) return;
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setSentiment(null);
       setDiscussion([]);
       setDiscussing(false);
     } finally {
-      setLoading(false);
+      if (thisFetchId === fetchIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [buildAdvisorsForDiscussion, customAdvisors, instructionOverrides, selectedAdvisorIds]);
 

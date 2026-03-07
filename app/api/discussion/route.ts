@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ADVISOR_IDS, type AdvisorForDiscussion, type AdvisorId } from "@/lib/advisors";
 import { generateMockDiscussion } from "@/lib/discussion";
 import { generateDiscussionWithGemini, generateDiscussionWithGeminiFromAdvisors } from "@/lib/gemini-discussion";
+import { getStockSentiment } from "@/lib/sentiment-api";
 import { getMockStockSentiment, type StockSentimentSummary } from "@/lib/sentiment";
 import { validateSymbol } from "@/lib/validation";
 
@@ -25,6 +26,7 @@ function runDiscussion(
   const summary = {
     currentSentiment: sentimentSummary.currentSentiment,
     outperformRate: sentimentSummary.outperformRate,
+    recentHeadlines: sentimentSummary.recentHeadlines,
   };
   if (process.env.GEMINI_API_KEY) {
     return generateDiscussionWithGeminiFromAdvisors(
@@ -53,7 +55,12 @@ export async function GET(request: NextRequest) {
   }
   const advisorIds = parseAdvisorIds(request.nextUrl.searchParams.get("advisors"));
   try {
-    const sentimentSummary = getMockStockSentiment(symbol);
+    let sentimentSummary: StockSentimentSummary;
+    try {
+      sentimentSummary = await getStockSentiment(symbol);
+    } catch {
+      sentimentSummary = getMockStockSentiment(symbol);
+    }
 
     if (process.env.GEMINI_API_KEY) {
       try {
@@ -73,6 +80,7 @@ export async function GET(request: NextRequest) {
       {
         currentSentiment: sentimentSummary.currentSentiment,
         outperformRate: sentimentSummary.outperformRate,
+        recentHeadlines: sentimentSummary.recentHeadlines,
       },
       advisorIds
     );
@@ -108,7 +116,12 @@ export async function POST(request: NextRequest) {
     );
   }
   try {
-    const sentimentSummary = getMockStockSentiment(symbol);
+    let sentimentSummary: StockSentimentSummary;
+    try {
+      sentimentSummary = await getStockSentiment(symbol);
+    } catch {
+      sentimentSummary = getMockStockSentiment(symbol);
+    }
     const messages = await runDiscussion(symbol, sentimentSummary, advisors);
     return NextResponse.json({ symbol, messages });
   } catch (err) {
