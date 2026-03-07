@@ -13,7 +13,7 @@ export default function NotFound() {
         href="/"
         className="px-4 py-2 rounded-md bg-accent text-white font-medium text-sm hover:bg-accent-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
       >
-        Go to Portfolio Pilot
+        Go to Gator Analyst
       </Link>
     </div>
   );

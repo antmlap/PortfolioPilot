@@ -298,7 +298,7 @@ function HomeContent() {
               <a
                 href="/"
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper rounded"
-                aria-label="Portfolio Pilot home"
+                aria-label="Gator Analyst home"
               >
                 <img
                   src="/logo.png"
@@ -308,7 +308,7 @@ function HomeContent() {
                   height={36}
                 />
                 <span className="font-display text-xl font-semibold text-ink tracking-tight">
-                  Portfolio Pilot
+                  Gator Analyst
                 </span>
                 <span className="text-mute text-sm hidden sm:inline">
                   Stock advisory
@@ -577,7 +577,7 @@ function HomeContent() {
           <div className="max-w-5xl mx-auto px-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <span className="font-display text-sm font-medium text-ink">
-                Portfolio Pilot
+                Gator Analyst
               </span>
               <nav
                 className="flex flex-wrap gap-6 text-sm text-mute"

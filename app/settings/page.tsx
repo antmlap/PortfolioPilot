@@ -78,7 +78,7 @@ export default function SettingsPage() {
                 width={36}
                 height={36}
               />
-              Portfolio Pilot
+              Gator Analyst
             </Link>
             <Link
               href="/"

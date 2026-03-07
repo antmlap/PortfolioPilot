@@ -22,12 +22,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Portfolio Pilot | Multi-Agent Stock Advisory",
+  title: "Gator Analyst | Multi-Agent Stock Advisory",
   description:
     "Get a roundtable take on any stock. Warren Buffett, Peter Lynch, Ray Dalio, Benjamin Graham, and Cathie Wood debate pros and cons with real-time sentiment and performance metrics.",
   keywords: ["stocks", "investing", "AI", "sentiment", "advisory", "portfolio"],
   openGraph: {
-    title: "Portfolio Pilot | Multi-Agent Stock Advisory",
+    title: "Gator Analyst | Multi-Agent Stock Advisory",
     description:
       "AI financial advisors debate stocks with real-time sentiment analysis.",
     type: "website",

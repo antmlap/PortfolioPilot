@@ -27,7 +27,7 @@ export function AppHeader({ rightSlot, className }: AppHeaderProps) {
           <a
             href="/"
             className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper rounded"
-            aria-label="Portfolio Pilot home"
+            aria-label="Gator Analyst home"
           >
             <img
               src="/logo.png"
@@ -37,7 +37,7 @@ export function AppHeader({ rightSlot, className }: AppHeaderProps) {
               height={36}
             />
             <span className="font-display text-xl font-semibold text-ink tracking-tight">
-              Portfolio Pilot
+              Gator Analyst
             </span>
             <span className="text-mute text-sm hidden sm:inline">
               Stock advisory

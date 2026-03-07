@@ -25,7 +25,7 @@ export default function LoginPage() {
               height={40}
             />
             <h1 className="text-2xl font-display font-semibold text-ink tracking-tight">
-              Portfolio Pilot
+              Gator Analyst
             </h1>
           </div>
           <p className="text-sm text-mute mt-1">Sign in to continue</p>
@@ -88,7 +88,7 @@ export default function LoginPage() {
           href="/"
           className="flex items-center justify-center gap-2 w-full py-3 rounded-md bg-accent text-white font-semibold hover:bg-accent-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         >
-          Go to Portfolio Pilot
+          Go to Gator Analyst
         </Link>
         <p className="text-center">
           <Link href="/settings" className="text-sm text-mute hover:text-accent transition-colors">

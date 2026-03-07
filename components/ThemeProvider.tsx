@@ -4,10 +4,10 @@ import { createContext, useContext, useLayoutEffect, useState } from "react";
 
 export type ThemeId = "uf" | "ucf" | "fsu" | "fau" | "usf";
 
-const THEME_STORAGE_KEY = "portfolio-pilot-theme";
-const CUSTOM_BG_KEY = "portfolio-pilot-custom-bg";
-const CUSTOM_BOX_KEY = "portfolio-pilot-custom-box";
-const USER_NAME_KEY = "portfolio-pilot-user-name";
+const THEME_STORAGE_KEY = "gator-analyst-theme";
+const CUSTOM_BG_KEY = "gator-analyst-custom-bg";
+const CUSTOM_BOX_KEY = "gator-analyst-custom-box";
+const USER_NAME_KEY = "gator-analyst-user-name";
 
 const themes: { id: ThemeId; name: string; description: string }[] = [
   { id: "uf", name: "UF", description: "University of Florida — Orange & Blue" },
