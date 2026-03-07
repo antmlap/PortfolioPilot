@@ -1,0 +1,5 @@
+{
+  "name": "gator-analyst",
+  "framework": "nextjs",
+  "buildCommand": "npm run build"
+}

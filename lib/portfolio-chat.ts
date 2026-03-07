@@ -27,7 +27,7 @@ function extractText(response: unknown): string {
 
 function buildPortfolioSummary(context: PortfolioContextItem[]): string {
   if (context.length === 0) {
-    return "The user has not added any holdings yet. They may be asking for general advice or sector ideas.";
+    return "The user has not added any holdings yet. They may be asking for general discussion or sector ideas.";
   }
   return context
     .map(

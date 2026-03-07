@@ -78,7 +78,7 @@ Recent headlines: ${headlinesSnippet}.`;
 Other advisors' takes so far:
 ${priorTakes}
 
-${forUserLine}Give a substantive investment take on ${symbol} using the data above. Be specific to this company—do not give generic advice. Write 4–6 complete sentences. Explain what the headlines, sentiment (${sentiment.currentSentiment.toFixed(2)}), and outperform rate (${sentiment.outperformRate}%) mean for ${symbol} from your investment philosophy. Be insightful: connect the data to your view (moat, growth, risk, margin of safety, disruption, etc.). Use the exact ticker "${symbol}". If you're favorable, say why the data supports that (Pro); if cautious, explain the risks (Con). End your response with exactly "(Pro)" or "(Con)". Do not truncate—finish your thought.`;
+${forUserLine}Give a substantive discussion take on ${symbol} using the data above. Be specific to this company—do not give generic recommendations. Write 4–6 complete sentences. Explain what the headlines, sentiment (${sentiment.currentSentiment.toFixed(2)}), and outperform rate (${sentiment.outperformRate}%) mean for ${symbol} from your investment philosophy. Be insightful: connect the data to your view (moat, growth, risk, margin of safety, disruption, etc.). Use the exact ticker "${symbol}". If you're favorable, say why the data supports that (Pro); if cautious, explain the risks (Con). End your response with exactly "(Pro)" or "(Con)". Do not truncate—finish your thought.`;
 
     const systemInstruction = `You are roleplaying as ${advisor.name}. Follow these instructions exactly:
 

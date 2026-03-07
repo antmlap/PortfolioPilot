@@ -311,7 +311,7 @@ function HomeContent() {
                   Gator Analyst
                 </span>
                 <span className="text-mute text-sm hidden sm:inline">
-                  Stock advisory
+                  Stock discussion
                 </span>
               </a>
               <div className="flex items-center gap-3">
@@ -500,9 +500,12 @@ function HomeContent() {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <div className="xl:col-span-2 space-y-8">
               <section className="rounded-lg border-2 border-orange bg-orange-mute p-6">
-                <h2 className="text-xs font-medium text-mute uppercase tracking-wider mb-4">
+                <h2 className="text-xs font-medium text-mute uppercase tracking-wider mb-1">
                   Advisor discussion{userName ? ` for ${userName}` : ""} — pros & cons
                 </h2>
+                <p className="text-xs text-mute mb-4">
+                  For discussion only. Not investment or financial advice.
+                </p>
                 {error ? null : loading ? (
                   <DiscussionSkeleton />
                 ) : discussion.length > 0 ? (
@@ -594,9 +597,11 @@ function HomeContent() {
                 </a>
               </nav>
             </div>
-            <p className="mt-4 text-xs text-mute">
-              For educational and informational use. Connect News API and market
-              data APIs for live sentiment and prices.
+            <p className="mt-4 text-xs text-mute max-w-xl">
+              <strong className="text-ink">Not financial advice.</strong> This
+              site is for educational and entertainment only. Nothing here is a
+              recommendation to buy, sell, or hold any security. Consult a
+              licensed financial professional before making investment decisions.
             </p>
           </div>
         </footer>

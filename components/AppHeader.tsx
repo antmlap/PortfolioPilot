@@ -40,7 +40,7 @@ export function AppHeader({ rightSlot, className }: AppHeaderProps) {
               Gator Analyst
             </span>
             <span className="text-mute text-sm hidden sm:inline">
-              Stock advisory
+              Stock discussion
             </span>
           </a>
           <div className="flex items-center gap-3">
