@@ -31,17 +31,28 @@ function buildPortfolioSummary(context: PortfolioContextItem[]): string {
     .join("\n");
 }
 
+const ADVISOR_PERSONAS = `
+- Warren Buffett (value, long-term): Focus on moats, intrinsic value, circle of competence. Concise, plain language.
+- Peter Lynch (growth at reasonable price): "Invest in what you know," ten-baggers, PEG, earnings growth. Concise.
+- Ray Dalio (principles, all-weather): Diversification, principles, risk parity. Concise.
+- Benjamin Graham (value, margin of safety): Margin of safety, Mr. Market, intrinsic value. Concise.
+- Cathie Wood (innovation, disruption): Long-term innovation, disruptive tech, thematic. Concise.`;
+
 export async function generatePortfolioChatReply(
   messages: ChatMessage[],
   portfolioContext: PortfolioContextItem[]
 ): Promise<string> {
   const portfolioSummary = buildPortfolioSummary(portfolioContext);
-  const systemPrompt = `You are a helpful portfolio advisor. The user can ask you for recommendations on their holdings, whether to rebalance, which sectors to consider, or what to add or trim.
+  const systemPrompt = `You simulate a roundtable of financial advisors discussing the user's portfolio and current holdings. Each advisor has a distinct philosophy:
+
+${ADVISOR_PERSONAS}
 
 Current holdings and recent performance (sentiment and outperform metrics):
 ${portfolioSummary}
 
-Give concise, practical advice. Use plain language. You can suggest sectors or themes, comment on concentration risk, or recommend rebalancing. Do not give specific buy/sell orders unless the user asks. Keep responses focused and actionable.`;
+Your task: Produce a single reply that is a discussion among these advisors about the user's portfolio and/or their latest question. Format the reply so each advisor speaks in turn (e.g. "Buffett: ... Lynch: ... Dalio: ..." or use clear labels). Each advisor should comment on the holdings, concentration, risk, or the user's question from their own perspective. Keep each advisor's take to 1-3 sentences. The discussion should feel like different voices debating or agreeing on the portfolio. If the user asks a specific question, have the advisors address it. If they have no holdings yet, have the advisors discuss what to consider or which sectors might fit each philosophy.
+
+Always end your reply with a "TL;DR:" line: one or two sentences summarizing the main takeaways or consensus from the discussion.`;
 
   const contents: { role: "user" | "model"; parts: { text: string }[] }[] = [];
   for (const msg of messages) {
@@ -54,7 +65,7 @@ Give concise, practical advice. Use plain language. You can suggest sectors or t
     contents: contents.length > 0 ? contents : [{ role: "user", parts: [{ text: "(User said nothing yet.)" }] }],
     config: {
       systemInstruction: systemPrompt,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 4096,
       temperature: 0.7,
     },
   });

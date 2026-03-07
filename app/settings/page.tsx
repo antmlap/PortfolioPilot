@@ -46,7 +46,16 @@ function ThemeCard({
 }
 
 export default function SettingsPage() {
-  const { theme, setTheme, themes } = useTheme();
+  const {
+    theme,
+    setTheme,
+    themes,
+    customBackground,
+    customBoxColor,
+    setCustomBackground,
+    setCustomBoxColor,
+    clearCustomColors,
+  } = useTheme();
 
   return (
     <div className="min-h-screen bg-paper">
@@ -105,6 +114,50 @@ export default function SettingsPage() {
                 onSelect={() => setTheme(t.id)}
               />
             ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-sm font-medium text-mute uppercase tracking-wider">
+            Customize
+          </h2>
+          <p className="text-mute text-sm">
+            Override the theme with your own colors. Cards and panels use the box color.
+          </p>
+          <div className="rounded-lg border-2 border-border bg-surface p-4 space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-ink">
+                <input
+                  type="color"
+                  value={customBackground ?? "#e8f0fa"}
+                  onChange={(e) => setCustomBackground(e.target.value)}
+                  className="w-10 h-10 rounded-md border-2 border-border cursor-pointer bg-paper"
+                  title="Background color"
+                />
+                Background
+              </label>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-ink">
+                <input
+                  type="color"
+                  value={customBoxColor ?? "#d4e4f4"}
+                  onChange={(e) => setCustomBoxColor(e.target.value)}
+                  className="w-10 h-10 rounded-md border-2 border-border cursor-pointer bg-paper"
+                  title="Box / card color"
+                />
+                Boxes (cards & panels)
+              </label>
+            </div>
+            {(customBackground || customBoxColor) && (
+              <button
+                type="button"
+                onClick={clearCustomColors}
+                className="text-sm font-medium text-mute hover:text-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
+              >
+                Reset to theme default
+              </button>
+            )}
           </div>
         </section>
       </main>

@@ -89,7 +89,7 @@ export default function PortfolioPage() {
             My Portfolio
           </h1>
           <p className="text-mute text-sm mt-1">
-            Add tickers to see performance and chat with AI for recommendations and sector ideas.
+            Add tickers to see performance and chat with advisors who discuss your current holdings and portfolio.
           </p>
         </div>
 
@@ -204,14 +204,14 @@ export default function PortfolioPage() {
         <section className="rounded-lg border-2 border-orange bg-orange-mute p-6 flex flex-col">
           <h2 className="text-xs font-medium text-mute uppercase tracking-wider mb-4 flex items-center gap-2">
             <MessageSquare className="w-4 h-4" aria-hidden />
-            Chat with AI
+            Chat with advisors
           </h2>
           <p className="text-mute text-xs mb-4">
-            Ask for portfolio recommendations, rebalancing ideas, or which sectors to consider.
+            Get a roundtable discussion: different advisors weigh in on your current holdings and portfolio.
           </p>
           <div className="flex-1 min-h-[200px] max-h-[400px] overflow-y-auto scrollbar-thin space-y-4 mb-4">
             {messages.length === 0 && (
-              <p className="text-mute text-sm py-4">Send a message to get started.</p>
+              <p className="text-mute text-sm py-4">Send a message to hear advisors discuss your holdings and portfolio.</p>
             )}
             {messages.map((msg, i) => (
               <div
@@ -224,7 +224,7 @@ export default function PortfolioPage() {
                 )}
               >
                 <p className="text-xs font-medium text-mute mb-1">
-                  {msg.role === "user" ? "You" : "Advisor"}
+                  {msg.role === "user" ? "You" : "Advisors"}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               </div>
@@ -241,7 +241,7 @@ export default function PortfolioPage() {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendChat()}
-              placeholder="Ask for recommendations..."
+              placeholder="Ask advisors to discuss your portfolio..."
               className="flex-1 px-3 py-2 rounded-md bg-surface border border-border text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
             />
             <button

@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       message: {
         role: "model",
         content:
-          "Portfolio chat is not configured (missing GEMINI_API_KEY). Add your API key in .env.local to get AI recommendations.",
+          "Portfolio chat is not configured (missing GEMINI_API_KEY). Add your API key in .env.local to get advisor discussions.",
       },
     });
   }
