@@ -200,6 +200,12 @@ export default function Home() {
               </a>
               <div className="flex items-center gap-3">
                 <a
+                  href="/portfolio"
+                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
+                >
+                  My Portfolio
+                </a>
+                <a
                   href="/settings"
                   className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
                 >
