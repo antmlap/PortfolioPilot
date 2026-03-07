@@ -1,10 +1,23 @@
 "use client";
 
-import { ADVISORS, type AdvisorId } from "@/lib/advisors";
+import { getAdvisorById, type CustomAdvisor } from "@/lib/advisors";
 import clsx from "clsx";
 
+const borderColors: Record<string, string> = {
+  buffett: "border-orange",
+  lynch: "border-emerald-500",
+  dalio: "border-accent",
+  graham: "border-amber-600",
+  wood: "border-rose-500",
+};
+
+function getBorderColor(advisorId: string): string {
+  return borderColors[advisorId] ?? "border-violet-500";
+}
+
 interface AdvisorAvatarProps {
-  advisorId: AdvisorId;
+  advisorId: string;
+  customAdvisors?: CustomAdvisor[];
   size?: "sm" | "md" | "lg";
   showName?: boolean;
   isSpeaking?: boolean;
@@ -19,39 +32,30 @@ const sizeClasses = {
 
 export function AdvisorAvatar({
   advisorId,
+  customAdvisors = [],
   size = "md",
   showName = false,
   isSpeaking = false,
   className,
 }: AdvisorAvatarProps) {
-  const advisor = ADVISORS[advisorId];
+  const advisor = getAdvisorById(advisorId, customAdvisors);
   if (!advisor) return null;
-
-  const borderColor =
-    advisorId === "buffett"
-      ? "border-gold"
-      : advisorId === "lynch"
-        ? "border-mint"
-        : advisorId === "dalio"
-          ? "border-teal"
-          : advisorId === "graham"
-            ? "border-amber-600"
-            : "border-coral";
 
   return (
     <div className={clsx("flex flex-col items-center gap-1", className)}>
       <div
         className={clsx(
-          "rounded-full border-2 bg-slate-800 flex items-center justify-center shrink-0 transition-all duration-300",
+          "rounded-full border-2 bg-surface flex items-center justify-center shrink-0 transition-all duration-300",
           sizeClasses[size],
-          borderColor,
-          isSpeaking && "ring-2 ring-offset-2 ring-offset-void ring-teal shadow-lg shadow-teal/20"
+          getBorderColor(advisorId),
+          isSpeaking &&
+            "ring-2 ring-offset-2 ring-offset-paper ring-accent shadow-md"
         )}
       >
         {advisor.avatar}
       </div>
       {showName && (
-        <span className="text-xs font-medium text-slate-400 max-w-[80px] truncate text-center">
+        <span className="text-xs font-medium text-mute max-w-[80px] truncate text-center">
           {advisor.name.split(" ").pop()}
         </span>
       )}

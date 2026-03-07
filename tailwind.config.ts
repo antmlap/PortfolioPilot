@@ -9,41 +9,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        void: "#0a0c10",
-        slate: {
-          950: "#0f1419",
-          900: "#161d26",
-          800: "#1e2732",
-          700: "#2a3544",
+        paper: "#e5ecf5",
+        surface: "#d4dce8",
+        ink: "#1a1a1a",
+        mute: "#5a6376",
+        border: "#b8c5d8",
+        accent: {
+          DEFAULT: "#0021A5",
+          hover: "#001a85",
+          mute: "#dae2f0",
         },
-        gold: {
-          DEFAULT: "#d4a853",
-          dim: "#b8923f",
-          bright: "#e8c97a",
+        orange: {
+          DEFAULT: "#FA4616",
+          hover: "#e03d12",
+          mute: "#fef0eb",
         },
-        teal: {
-          DEFAULT: "#2dd4bf",
-          dim: "#14b8a6",
-          bright: "#5eead4",
-        },
-        coral: "#f87171",
-        mint: "#6ee7b7",
+        positive: "#0d6b4c",
+        negative: "#b91c1c",
+        neutral: "#525252",
       },
       fontFamily: {
-        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "JetBrains Mono", "monospace"],
+        display: ["var(--font-serif)", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       animation: {
-        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "slide-up": "slide-up 0.3s ease-out",
       },
       keyframes: {
-        "pulse-soft": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.85" },
-        },
         "slide-up": {
-          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "0%": { opacity: "0", transform: "translateY(6px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },

@@ -13,8 +13,8 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #2dd4bf 0%, #d4a853 100%)",
-          borderRadius: 8,
+          background: "#0021A5",
+          borderRadius: 6,
         }}
       >
         <svg
@@ -22,7 +22,7 @@ export default function Icon() {
           height="18"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#0a0c10"
+          stroke="#fff"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"

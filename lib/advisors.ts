@@ -15,6 +15,29 @@ export interface Advisor {
   instructions: string;
 }
 
+/** Custom user-created advisor (id starts with "custom-"). */
+export interface CustomAdvisor {
+  id: string;
+  name: string;
+  title: string;
+  tagline: string;
+  avatar: string;
+  color: string;
+  instructions: string;
+}
+
+export function isCustomAdvisorId(id: string): id is string {
+  return id.startsWith("custom-");
+}
+
+/** Shape used when sending advisors to the discussion API (built-in or custom). */
+export interface AdvisorForDiscussion {
+  id: string;
+  name: string;
+  title?: string;
+  instructions: string;
+}
+
 export const ADVISORS: Record<AdvisorId, Advisor> = {
   buffett: {
     id: "buffett",
@@ -99,3 +122,24 @@ Keep responses concise (2-4 sentences). Use plain language. Reference innovation
 };
 
 export const ADVISOR_IDS: AdvisorId[] = ["buffett", "lynch", "dalio", "graham", "wood"];
+
+export const CUSTOM_ADVISOR_DEFAULTS: Omit<CustomAdvisor, "id"> = {
+  name: "My Advisor",
+  title: "Custom perspective",
+  tagline: "Your own investment philosophy.",
+  avatar: "✨",
+  color: "text-violet-500 border-violet-500",
+  instructions: `You are a thoughtful investor. Your core beliefs:
+- Consider both growth and value; avoid extreme positions.
+- Focus on fundamentals and long-term trends.
+- Keep responses concise (2-4 sentences). Use plain language.`,
+};
+
+/** Resolve advisor by id from built-in or custom list (for display). */
+export function getAdvisorById(
+  id: string,
+  customAdvisors: CustomAdvisor[] = []
+): (Advisor | CustomAdvisor) | null {
+  if (ADVISORS[id as AdvisorId]) return ADVISORS[id as AdvisorId];
+  return customAdvisors.find((c) => c.id === id) ?? null;
+}

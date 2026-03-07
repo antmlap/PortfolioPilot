@@ -21,42 +21,48 @@ export function MetricsCards({
       value: `${outperformRate}%`,
       sub: "of periods beat sentiment",
       icon: Percent,
-      color: "text-teal",
-      bg: "bg-teal/10",
+      color: "text-accent",
+      bg: "bg-accent-mute",
     },
     {
       label: "Avg outperformance",
       value: `${avgOutperformance > 0 ? "+" : ""}${avgOutperformance}%`,
       sub: "vs sentiment-implied return",
       icon: BarChart3,
-      color: avgOutperformance >= 0 ? "text-mint" : "text-coral",
-      bg: avgOutperformance >= 0 ? "bg-mint/10" : "bg-coral/10",
+      color: avgOutperformance >= 0 ? "text-positive" : "text-negative",
+      bg: avgOutperformance >= 0 ? "bg-green-50" : "bg-red-50",
     },
     {
       label: "Current sentiment",
       value: currentSentiment.toFixed(2),
       sub: "score (-1 to +1)",
       icon: TrendingUp,
-      color: "text-gold",
-      bg: "bg-gold/10",
+      color: "text-orange",
+      bg: "bg-orange-mute",
     },
   ];
 
   return (
     <div className={className} role="region" aria-label="Stock metrics">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {cards.map((c) => (
           <div
             key={c.label}
-            className="glass rounded-xl p-4 flex flex-col gap-1"
+            className="rounded-lg border-2 border-orange bg-orange-mute p-4 flex flex-col gap-1"
             aria-label={`${c.label}: ${c.value}`}
           >
-            <div className={`inline-flex w-8 h-8 rounded-lg items-center justify-center ${c.bg} ${c.color}`}>
+            <div
+              className={`inline-flex w-9 h-9 rounded-md items-center justify-center ${c.bg} ${c.color}`}
+            >
               <c.icon className="w-4 h-4" />
             </div>
-            <span className="text-[10px] uppercase tracking-wider text-slate-500">{c.label}</span>
-            <span className={`font-mono text-lg font-semibold ${c.color}`}>{c.value}</span>
-            <span className="text-xs text-slate-500">{c.sub}</span>
+            <span className="text-[10px] uppercase tracking-wider text-mute font-medium">
+              {c.label}
+            </span>
+            <span className={`font-mono text-lg font-semibold ${c.color}`}>
+              {c.value}
+            </span>
+            <span className="text-xs text-mute">{c.sub}</span>
           </div>
         ))}
       </div>

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
+import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from "./advisors";
 import type { DiscussionMessage } from "./discussion";
 import type { StockSentimentSummary } from "./sentiment";
 
@@ -36,10 +36,17 @@ function extractText(response: unknown): string {
   return (part?.text as string) ?? "";
 }
 
-export async function generateDiscussionWithGemini(
+function getAdvisorName(advisorId: string, advisors: AdvisorForDiscussion[]): string {
+  const a = advisors.find((x) => x.id === advisorId);
+  return a?.name ?? advisorId;
+}
+
+export async function generateDiscussionWithGeminiFromAdvisors(
   symbol: string,
-  sentiment: StockSentimentSummary
+  sentiment: StockSentimentSummary,
+  advisors: AdvisorForDiscussion[]
 ): Promise<DiscussionMessage[]> {
+  if (advisors.length === 0) return [];
   const headlinesSnippet = sentiment.recentHeadlines
     .map((h) => `"${h.text}" (sentiment ${h.score.toFixed(2)})`)
     .join("; ");
@@ -51,15 +58,14 @@ Recent headlines: ${headlinesSnippet}.`;
 
   const messages: DiscussionMessage[] = [];
 
-  for (let i = 0; i < ADVISOR_IDS.length; i++) {
-    const advisorId = ADVISOR_IDS[i] as AdvisorId;
-    const advisor = ADVISORS[advisorId];
+  for (let i = 0; i < advisors.length; i++) {
+    const advisor = advisors[i];
     const priorTakes =
       messages.length > 0
         ? messages
             .map(
               (m) =>
-                `${ADVISORS[m.advisorId].name}: ${m.content} (${m.isPro ? "Pro" : "Con"})`
+                `${getAdvisorName(m.advisorId, advisors)}: ${m.content} (${m.isPro ? "Pro" : "Con"})`
             )
             .join("\n")
         : "No prior takes yet.";
@@ -94,17 +100,29 @@ ${userMessage}`;
       const { content, isPro } = parseProCon(raw);
       messages.push({
         id: String(i + 1),
-        advisorId,
+        advisorId: advisor.id,
         role: "advisor",
         content: content || raw,
         timestamp: new Date().toISOString(),
         isPro,
       });
     } catch (err) {
-      console.error(`Gemini error for ${advisorId}:`, err);
+      console.error(`Gemini error for ${advisor.id}:`, err);
       throw err;
     }
   }
 
   return messages;
+}
+
+export async function generateDiscussionWithGemini(
+  symbol: string,
+  sentiment: StockSentimentSummary,
+  advisorIds: AdvisorId[] = ADVISOR_IDS
+): Promise<DiscussionMessage[]> {
+  const advisors: AdvisorForDiscussion[] = advisorIds.map((id) => {
+    const a = ADVISORS[id];
+    return { id: a.id, name: a.name, title: a.title, instructions: a.instructions };
+  });
+  return generateDiscussionWithGeminiFromAdvisors(symbol, sentiment, advisors);
 }

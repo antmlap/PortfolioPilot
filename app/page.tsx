@@ -1,20 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Sparkles, Loader2 } from "lucide-react";
-import { ADVISOR_IDS } from "@/lib/advisors";
-import { AdvisorAvatar } from "@/components/AdvisorAvatar";
+import { Search, Loader2 } from "lucide-react";
 import { DiscussionThread } from "@/components/DiscussionThread";
 import { SentimentGauge } from "@/components/SentimentGauge";
 import { SentimentChart } from "@/components/SentimentChart";
 import { HeadlinesFeed } from "@/components/HeadlinesFeed";
 import { MetricsCards } from "@/components/MetricsCards";
+import { StockChart } from "@/components/StockChart";
 import { Hero } from "@/components/Hero";
-import { HowItWorks } from "@/components/HowItWorks";
-import { AdvisorsSection } from "@/components/AdvisorsSection";
+import { SelectAdvisors } from "@/components/SelectAdvisors";
 import { MetricsSkeleton, DiscussionSkeleton, SidebarSkeleton } from "@/components/LoadingSkeletons";
 import { ErrorState } from "@/components/ErrorState";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ADVISORS, ADVISOR_IDS, type AdvisorId, type CustomAdvisor, type AdvisorForDiscussion } from "@/lib/advisors";
+import { apiUrl } from "@/lib/api";
 import type { DiscussionMessage } from "@/lib/discussion";
 import type { StockSentimentSummary } from "@/lib/sentiment";
 
@@ -26,6 +26,9 @@ export default function Home() {
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [sentiment, setSentiment] = useState<StockSentimentSummary | null>(null);
   const [discussion, setDiscussion] = useState<DiscussionMessage[]>([]);
+  const [selectedAdvisorIds, setSelectedAdvisorIds] = useState<AdvisorId[]>(() => [...ADVISOR_IDS]);
+  const [customAdvisors, setCustomAdvisors] = useState<CustomAdvisor[]>([]);
+  const [instructionOverrides, setInstructionOverrides] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [discussing, setDiscussing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,13 +42,53 @@ export default function Home() {
     }
   };
 
+  const buildAdvisorsForDiscussion = useCallback((): AdvisorForDiscussion[] => {
+    const list: AdvisorForDiscussion[] = [];
+    for (const id of selectedAdvisorIds) {
+      const a = ADVISORS[id];
+      if (a) {
+        list.push({
+          id: a.id,
+          name: a.name,
+          title: a.title,
+          instructions: instructionOverrides[a.id] ?? a.instructions,
+        });
+      }
+    }
+    for (const c of customAdvisors) {
+      list.push({
+        id: c.id,
+        name: c.name,
+        title: c.title,
+        instructions: c.instructions,
+      });
+    }
+    return list;
+  }, [selectedAdvisorIds, customAdvisors, instructionOverrides]);
+
   const fetchData = useCallback(async (sym: string) => {
     setLoading(true);
     setError(null);
+    const advisorsForDiscussion = buildAdvisorsForDiscussion();
+    const usePost = customAdvisors.length > 0 || Object.keys(instructionOverrides).length > 0;
     try {
       const [sentRes, discRes] = await Promise.all([
-        fetch(`/api/sentiment?symbol=${encodeURIComponent(sym)}`),
-        fetch(`/api/discussion?symbol=${encodeURIComponent(sym)}`),
+        fetch(apiUrl(`/api/sentiment?symbol=${encodeURIComponent(sym)}`)),
+        usePost && advisorsForDiscussion.length > 0
+          ? fetch(apiUrl("/api/discussion"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ symbol: sym, advisors: advisorsForDiscussion }),
+            })
+          : fetch(
+              apiUrl(
+                `/api/discussion?symbol=${encodeURIComponent(sym)}${
+                  selectedAdvisorIds.length > 0
+                    ? `&advisors=${encodeURIComponent(selectedAdvisorIds.join(","))}`
+                    : ""
+                }`
+              )
+            ),
       ]);
       if (!sentRes.ok) {
         throw new Error(
@@ -77,7 +120,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [buildAdvisorsForDiscussion, customAdvisors, instructionOverrides, selectedAdvisorIds]);
 
   useEffect(() => {
     fetchData(symbol);
@@ -85,7 +128,7 @@ export default function Home() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/symbol?symbol=${encodeURIComponent(symbol)}`)
+    fetch(apiUrl(`/api/symbol?symbol=${encodeURIComponent(symbol)}`))
       .then((r) => r.json())
       .then((data: { valid?: boolean; name?: string }) => {
         if (!cancelled && data.valid && data.name) setCompanyName(data.name);
@@ -102,7 +145,7 @@ export default function Home() {
     if (!s) return;
     setError(null);
     try {
-      const res = await fetch(`/api/symbol?symbol=${encodeURIComponent(s)}`);
+      const res = await fetch(apiUrl(`/api/symbol?symbol=${encodeURIComponent(s)}`));
       const data = (await res.json()) as {
         valid?: boolean;
         symbol?: string;
@@ -129,201 +172,218 @@ export default function Home() {
 
   return (
     <ErrorBoundary>
-    <div className="min-h-screen bg-void bg-grid">
-      {/* Header */}
-      <header className="border-b border-slate-800/60 sticky top-0 z-10 glass" role="banner">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <a
-              href="/"
-              className="flex items-center gap-3 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-void rounded-lg"
-              aria-label="Portfolio Pilot home"
-            >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal to-gold flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5 text-void" aria-hidden />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Portfolio Pilot</h1>
-                <p className="text-xs text-slate-500">Multi-agent stock advisory</p>
-              </div>
-            </a>
-            <form onSubmit={handleSearch} className="flex gap-2" role="search" aria-label="Search by ticker">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" aria-hidden />
-                <input
-                  type="text"
-                  value={inputSymbol}
-                  onChange={(e) => setInputSymbol(e.target.value.toUpperCase())}
-                  placeholder="Symbol (e.g. AAPL)"
-                  maxLength={5}
-                  autoComplete="off"
-                  aria-label="Stock ticker symbol"
-                  className="w-32 sm:w-40 pl-9 pr-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-sm font-mono text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                aria-busy={loading}
-                aria-label={loading ? "Analyzing…" : "Analyze stock"}
-                className="px-4 py-2 rounded-lg bg-teal text-void font-semibold text-sm hover:bg-teal-bright transition-colors disabled:opacity-50 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+      <div className="min-h-screen bg-paper">
+        <header
+          className="border-b border-border bg-paper/95 backdrop-blur-sm sticky top-0 z-10"
+          role="banner"
+        >
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <a
+                href="/"
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper rounded"
+                aria-label="Portfolio Pilot home"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : "Analyze"}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-
-      <main id="main" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Hero */}
-        <Hero
-          onSelectSymbol={handleSelectSymbol}
-          currentSymbol={symbol}
-          isLoading={loading}
-        />
-
-        {/* Symbol & status */}
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono text-2xl font-bold text-white">{symbol}</span>
-          {companyName && (
-            <span className="text-slate-400 text-lg" aria-label={`Company: ${companyName}`}>
-              — {companyName}
-            </span>
-          )}
-          {discussing && (
-            <span className="text-xs text-teal flex items-center gap-1 w-full sm:w-auto">
-              <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
-              Advisors discussing...
-            </span>
-          )}
-        </div>
-
-        {/* Error state */}
-        {error && (
-          <ErrorState message={error} onRetry={() => fetchData(symbol)} />
-        )}
-
-        {/* Metrics row */}
-        {!error && loading && <MetricsSkeleton />}
-        {!error && sentiment && (
-          <MetricsCards
-            outperformRate={sentiment.outperformRate}
-            avgOutperformance={sentiment.avgOutperformance}
-            currentSentiment={sentiment.currentSentiment}
-          />
-        )}
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Left: Roundtable + Discussion */}
-          <div className="xl:col-span-2 space-y-6">
-            {/* Roundtable avatars */}
-            <section className="glass rounded-2xl p-6">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-                Advisory panel
-              </h2>
-              <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
-                {ADVISOR_IDS.map((id) => (
-                  <AdvisorAvatar
-                    key={id}
-                    advisorId={id}
-                    size="lg"
-                    showName
-                    isSpeaking={
-                      discussion.length > 0 &&
-                      discussion[discussion.length - 1]?.advisorId === id
+                <span className="font-display text-xl font-semibold text-ink tracking-tight">
+                  Portfolio Pilot
+                </span>
+                <span className="text-mute text-sm hidden sm:inline">
+                  Stock advisory
+                </span>
+              </a>
+              <form
+                onSubmit={handleSearch}
+                className="flex gap-2"
+                role="search"
+                aria-label="Search by ticker"
+              >
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mute pointer-events-none"
+                    aria-hidden
+                  />
+                  <input
+                    type="text"
+                    value={inputSymbol}
+                    onChange={(e) =>
+                      setInputSymbol(e.target.value.toUpperCase())
                     }
+                    placeholder="Symbol (e.g. AAPL)"
+                    maxLength={6}
+                    autoComplete="off"
+                    aria-label="Stock ticker symbol"
+                    className="w-32 sm:w-40 pl-9 pr-3 py-2 rounded-md bg-surface border border-border text-sm font-mono text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
                   />
-                ))}
-              </div>
-            </section>
-
-            {/* Discussion thread */}
-            <section className="glass rounded-2xl p-6">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-                Advisor discussion — pros & cons
-              </h2>
-              {error ? null : loading ? (
-                <DiscussionSkeleton />
-              ) : discussion.length > 0 ? (
-                <DiscussionThread messages={discussion} />
-              ) : (
-                <p className="text-slate-500 text-sm py-8 text-center">
-                  Enter a symbol and click Analyze, or pick a ticker above to start the discussion.
-                </p>
-              )}
-            </section>
-          </div>
-
-          {/* Right: Sentiment & news */}
-          <div className="space-y-6">
-            {loading && <SidebarSkeleton />}
-            {!loading && !sentiment && !error && (
-              <div className="glass rounded-2xl p-8 text-center text-slate-500 text-sm">
-                Analyze a stock to see real-time sentiment, headlines, and sentiment vs performance.
-              </div>
-            )}
-            {!loading && sentiment && (
-              <>
-                <section className="glass rounded-2xl p-6">
-                  <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-                    Real-time sentiment
-                  </h2>
-                  <SentimentGauge
-                    score={sentiment.currentSentiment}
-                    level={sentiment.currentLevel}
-                    label="News sentiment"
-                  />
-                </section>
-                <section className="glass rounded-2xl p-6">
-                  <HeadlinesFeed headlines={sentiment.recentHeadlines} />
-                </section>
-                <section className="glass rounded-2xl p-6">
-                  <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-                    Sentiment vs performance
-                  </h2>
-                  <SentimentChart data={sentiment.historical} />
-                </section>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* How it works */}
-        <HowItWorks />
-
-        {/* Meet the advisors */}
-        <AdvisorsSection />
-      </main>
-
-      <footer className="border-t border-slate-800/60 mt-12 py-8" role="contentinfo">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal to-gold flex items-center justify-center shrink-0">
-                <Sparkles className="w-4 h-4 text-void" aria-hidden />
-              </div>
-              <span className="text-sm font-medium text-slate-400">Portfolio Pilot</span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  aria-busy={loading}
+                  aria-label={loading ? "Analyzing…" : "Analyze stock"}
+                  className="px-4 py-2 rounded-md bg-accent text-white font-medium text-sm hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  ) : (
+                    "Analyze"
+                  )}
+                </button>
+              </form>
             </div>
-            <nav className="flex flex-wrap gap-6 text-sm text-slate-500" aria-label="Footer">
-              <a href="#main" className="hover:text-slate-300 transition-colors">
-                Top
-              </a>
-              <a href="#how-it-works" className="hover:text-slate-300 transition-colors">
-                How it works
-              </a>
-              <a href="#advisors" className="hover:text-slate-300 transition-colors">
-                Advisors
-              </a>
-            </nav>
           </div>
-          <p className="mt-4 text-xs text-slate-600">
-            For educational and informational use. Connect News API and market data APIs for
-            live sentiment and prices.
-          </p>
-        </div>
-      </footer>
-    </div>
+        </header>
+
+        <main
+          id="main"
+          className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8"
+        >
+          <Hero
+            onSelectSymbol={handleSelectSymbol}
+            currentSymbol={symbol}
+            isLoading={loading}
+          />
+
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="font-mono text-2xl font-semibold text-ink">
+              {symbol}
+            </span>
+            {companyName && (
+              <span
+                className="text-mute text-lg"
+                aria-label={`Company: ${companyName}`}
+              >
+                — {companyName}
+              </span>
+            )}
+            {discussing && (
+              <span className="text-sm text-accent flex items-center gap-1 w-full sm:w-auto">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
+                Advisors discussing…
+              </span>
+            )}
+          </div>
+
+          <section className="rounded-lg border-2 border-orange bg-orange-mute p-4 sm:p-6">
+            <StockChart symbol={symbol} />
+          </section>
+
+          {error && (
+            <ErrorState message={error} onRetry={() => fetchData(symbol)} />
+          )}
+
+          {!error && loading && <MetricsSkeleton />}
+          {!error && sentiment && (
+            <MetricsCards
+              outperformRate={sentiment.outperformRate}
+              avgOutperformance={sentiment.avgOutperformance}
+              currentSentiment={sentiment.currentSentiment}
+            />
+          )}
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="xl:col-span-2 space-y-8">
+              <section className="rounded-lg border-2 border-orange bg-orange-mute p-6">
+                <h2 className="text-xs font-medium text-mute uppercase tracking-wider mb-4">
+                  Advisor discussion — pros & cons
+                </h2>
+                {error ? null : loading ? (
+                  <DiscussionSkeleton />
+                ) : discussion.length > 0 ? (
+                  <DiscussionThread messages={discussion} customAdvisors={customAdvisors} />
+                ) : (
+                  <p className="text-mute text-sm py-8 text-center">
+                    Enter a symbol and click Analyze, or pick a ticker above to
+                    start the discussion.
+                  </p>
+                )}
+              </section>
+            </div>
+
+            <div className="space-y-6">
+              {loading && <SidebarSkeleton />}
+              {!loading && !sentiment && !error && (
+                <div className="rounded-lg border-2 border-orange bg-orange-mute p-8 text-center text-mute text-sm">
+                  Analyze a stock to see real-time sentiment, headlines, and
+                  sentiment vs performance.
+                </div>
+              )}
+              {!loading && sentiment && (
+                <>
+                  <section className="rounded-lg border-2 border-orange bg-orange-mute p-6">
+                    <h2 className="text-xs font-medium text-mute uppercase tracking-wider mb-4">
+                      Real-time sentiment
+                    </h2>
+                    <SentimentGauge
+                      score={sentiment.currentSentiment}
+                      level={sentiment.currentLevel}
+                      label="News sentiment"
+                    />
+                  </section>
+                  <section className="rounded-lg border-2 border-orange bg-orange-mute p-6">
+                    <HeadlinesFeed headlines={sentiment.recentHeadlines} />
+                  </section>
+                  <section className="rounded-lg border-2 border-orange bg-orange-mute p-6">
+                    <h2 className="text-xs font-medium text-mute uppercase tracking-wider mb-4">
+                      Sentiment vs performance
+                    </h2>
+                    <SentimentChart data={sentiment.historical} />
+                  </section>
+                </>
+              )}
+            </div>
+          </div>
+
+          <SelectAdvisors
+            selectedIds={selectedAdvisorIds}
+            customAdvisors={customAdvisors}
+            instructionOverrides={instructionOverrides}
+            onSelectionChange={setSelectedAdvisorIds}
+            onCustomAdvisorsChange={setCustomAdvisors}
+            onInstructionOverride={(id, instructions) =>
+              setInstructionOverrides((prev) =>
+                instructions == null
+                  ? (() => {
+                      const next = { ...prev };
+                      delete next[id];
+                      return next;
+                    })()
+                  : { ...prev, [id]: instructions }
+              )
+            }
+          />
+        </main>
+
+        <footer
+          className="border-t border-border mt-16 py-8 bg-paper"
+          role="contentinfo"
+        >
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <span className="font-display text-sm font-medium text-ink">
+                Portfolio Pilot
+              </span>
+              <nav
+                className="flex flex-wrap gap-6 text-sm text-mute"
+                aria-label="Footer"
+              >
+                <a href="#main" className="hover:text-ink transition-colors">
+                  Top
+                </a>
+                <a
+                  href="#select-advisors"
+                  className="hover:text-ink transition-colors"
+                >
+                  Select advisors
+                </a>
+              </nav>
+            </div>
+            <p className="mt-4 text-xs text-mute">
+              For educational and informational use. Connect News API and market
+              data APIs for live sentiment and prices.
+            </p>
+          </div>
+        </footer>
+      </div>
     </ErrorBoundary>
   );
 }

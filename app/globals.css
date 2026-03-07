@@ -3,49 +3,34 @@
 @tailwind utilities;
 
 :root {
-  --void: #0a0c10;
-  --slate-950: #0f1419;
-  --slate-900: #161d26;
-  --gold: #d4a853;
-  --teal: #2dd4bf;
+  --paper: #e5ecf5;
+  --ink: #1a1a1a;
+  --mute: #5a6376;
+  --border: #b8c5d8;
+  --accent: #0021A5;
+  --orange: #FA4616;
 }
 
 body {
-  background: var(--void);
-  color: #e2e8f0;
+  background: var(--paper);
+  color: var(--ink);
 }
 
-/* Focus visible for accessibility */
 :focus-visible {
-  @apply outline-2 outline-offset-2 outline-teal;
+  @apply outline-2 outline-offset-2 outline-accent;
 }
 
-/* Subtle grid background */
-.bg-grid {
-  background-image:
-    linear-gradient(rgba(45, 212, 191, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(45, 212, 191, 0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
-}
-
-/* Glass panel */
-.glass {
-  @apply bg-slate-900/80 backdrop-blur-xl border border-slate-700/50;
-}
-
-/* Scrollbar */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
-  @apply bg-slate-900/50 rounded-full;
+  @apply bg-border/50 rounded-full;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  @apply bg-slate-700 rounded-full hover:bg-slate-600;
+  @apply bg-mute/30 rounded-full hover:bg-mute/50;
 }
 
-/* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

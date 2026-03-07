@@ -20,7 +20,7 @@ export function SentimentChart({ data, className }: SentimentChartProps) {
   if (!data?.length) {
     return (
       <div className={className}>
-        <p className="text-xs text-slate-500 font-mono">No historical data yet.</p>
+        <p className="text-xs text-mute font-mono">No historical data yet.</p>
       </div>
     );
   }
@@ -32,42 +32,52 @@ export function SentimentChart({ data, className }: SentimentChartProps) {
 
   return (
     <div className={className}>
-      <p className="text-xs text-slate-400 mb-2 font-mono">
-        Historical: Sentiment vs actual return (green = outperformed sentiment)
+      <p className="text-xs text-mute mb-2 font-mono">
+        Historical: sentiment vs actual return (green = outperformed)
       </p>
       <div className="h-[180px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+          <AreaChart
+            data={chartData}
+            margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+          >
             <defs>
               <linearGradient id="sentimentGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0} />
+                <stop offset="0%" stopColor="#0021A5" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="#0021A5" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis
               dataKey="dateShort"
-              tick={{ fontSize: 10, fill: "#94a3b8" }}
+              tick={{ fontSize: 10, fill: "#6b6b6b" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               yAxisId="left"
-              tick={{ fontSize: 10, fill: "#94a3b8" }}
+              tick={{ fontSize: 10, fill: "#6b6b6b" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => `${v}%`}
             />
-            <ReferenceLine yAxisId="left" y={0} stroke="#475569" strokeDasharray="2 2" />
+            <ReferenceLine
+              yAxisId="left"
+              y={0}
+              stroke="#e5e2dd"
+              strokeDasharray="2 2"
+            />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#1e2732",
-                border: "1px solid #334155",
-                borderRadius: "8px",
+                backgroundColor: "#f7faf2",
+                border: "1px solid #e5e2dd",
+                borderRadius: "6px",
                 fontSize: "12px",
               }}
-              labelStyle={{ color: "#94a3b8" }}
+              labelStyle={{ color: "#6b6b6b" }}
               formatter={(value: number, name: string) => [
-                name === "actualReturn" ? `${value.toFixed(2)}%` : value.toFixed(2),
+                name === "actualReturn"
+                  ? `${value.toFixed(2)}%`
+                  : value.toFixed(2),
                 name === "actualReturn" ? "Actual return" : "Sentiment",
               ]}
               labelFormatter={(label) => `Date: ${label}`}
@@ -76,7 +86,7 @@ export function SentimentChart({ data, className }: SentimentChartProps) {
               yAxisId="left"
               type="monotone"
               dataKey="actualReturn"
-              stroke="#2dd4bf"
+              stroke="#0021A5"
               strokeWidth={2}
               fill="url(#sentimentGrad)"
             />
