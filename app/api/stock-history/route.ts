@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import YahooFinance from "yahoo-finance2";
 import type { StockHistoryPoint, TimeframeKey } from "@/lib/stock-history";
 
 function getDateRange(timeframe: TimeframeKey): { period1: Date; period2: Date; interval: "1d" | "1h" | "5m" } {
@@ -58,6 +57,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { default: YahooFinance } = await import("yahoo-finance2");
     const yahooFinance = new YahooFinance();
     const { period1, period2, interval } = getDateRange(timeframe);
 

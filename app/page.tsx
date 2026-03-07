@@ -184,6 +184,13 @@ export default function Home() {
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper rounded"
                 aria-label="Portfolio Pilot home"
               >
+                <img
+                  src="/logo.png"
+                  alt=""
+                  className="h-9 w-auto object-contain [mix-blend-mode:darken]"
+                  width={36}
+                  height={36}
+                />
                 <span className="font-display text-xl font-semibold text-ink tracking-tight">
                   Portfolio Pilot
                 </span>
@@ -191,7 +198,20 @@ export default function Home() {
                   Stock advisory
                 </span>
               </a>
-              <form
+              <div className="flex items-center gap-3">
+                <a
+                  href="/settings"
+                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
+                >
+                  Settings
+                </a>
+                <a
+                  href="/login"
+                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
+                >
+                  Log in
+                </a>
+                <form
                 onSubmit={handleSearch}
                 className="flex gap-2"
                 role="search"
@@ -229,6 +249,7 @@ export default function Home() {
                   )}
                 </button>
               </form>
+              </div>
             </div>
           </div>
         </header>

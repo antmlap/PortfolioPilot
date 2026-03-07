@@ -9,20 +9,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#e5ecf5",
-        surface: "#d4dce8",
-        ink: "#1a1a1a",
-        mute: "#5a6376",
-        border: "#b8c5d8",
+        paper: "var(--paper)",
+        surface: "var(--surface)",
+        ink: "var(--ink)",
+        mute: "var(--mute)",
+        border: "var(--border)",
         accent: {
-          DEFAULT: "#0021A5",
-          hover: "#001a85",
-          mute: "#dae2f0",
+          DEFAULT: "var(--accent)",
+          hover: "var(--accent-hover)",
+          mute: "var(--accent-mute)",
         },
         orange: {
-          DEFAULT: "#FA4616",
-          hover: "#e03d12",
-          mute: "#fef0eb",
+          DEFAULT: "var(--orange)",
+          hover: "var(--orange-hover)",
+          mute: "var(--orange-mute)",
         },
         positive: "#0d6b4c",
         negative: "#b91c1c",
