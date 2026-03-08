@@ -1,33 +1,5 @@
 import { NextResponse } from "next/server";
-
-export interface BrowseEarning {
-  symbol: string;
-  name: string;
-  date: string;
-  when: "bmo" | "amc";
-}
-
-export interface BrowseIpo {
-  name: string;
-  symbol: string;
-  date: string;
-  exchange: string;
-}
-
-export interface BrowseMover {
-  symbol: string;
-  name: string;
-  price: number;
-  changePercent: number;
-  change: number;
-}
-
-export interface BrowseData {
-  upcomingEarnings: BrowseEarning[];
-  upcomingIpos: BrowseIpo[];
-  topGainers: BrowseMover[];
-  topLosers: BrowseMover[];
-}
+import type { BrowseData, BrowseEarning, BrowseIpo, BrowseMover } from "@/lib/browse-types";
 
 /** Mock upcoming earnings (replace with real calendar API when available). */
 function getMockEarnings(): BrowseEarning[] {
@@ -142,18 +114,19 @@ export async function GET() {
       .map((q) => screenerQuoteToMover(q as unknown as Record<string, unknown>))
       .filter((m): m is BrowseMover => m != null);
 
+    const mockMovers = getMockMovers();
     return NextResponse.json({
       ...baseData,
-      topGainers: topGainers.length > 0 ? topGainers : getMockMovers().topGainers,
-      topLosers: topLosers.length > 0 ? topLosers : getMockMovers().topLosers,
+      topGainers: topGainers.length > 0 ? topGainers : mockMovers.topGainers,
+      topLosers: topLosers.length > 0 ? topLosers : mockMovers.topLosers,
     });
   } catch (err) {
     console.error("Browse API error:", err);
-    const { topGainers, topLosers } = getMockMovers();
+    const mockMovers = getMockMovers();
     return NextResponse.json({
       ...baseData,
-      topGainers,
-      topLosers,
+      topGainers: mockMovers.topGainers,
+      topLosers: mockMovers.topLosers,
     });
   }
 }

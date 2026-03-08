@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import type { StockSentimentSummary } from "@/lib/sentiment";
 import type { StockHistoryPoint } from "@/lib/stock-history";
-import { SYMBOL_SUGGESTIONS_LIST } from "@/lib/symbols";
 import { apiUrl } from "@/lib/api";
+import { useClickOutside } from "@/lib/hooks/useClickOutside";
+import { useTickerAutocomplete } from "@/lib/hooks/useTickerAutocomplete";
 import { SentimentGauge } from "@/components/SentimentGauge";
 import { ADVISORS, ADVISOR_IDS } from "@/lib/advisors";
 import { Loader2, Plus, MessageSquare, Send, Trash2, ChevronDown, Check, Pencil, PieChart as PieChartIcon, TrendingUp } from "lucide-react";
@@ -109,7 +110,6 @@ function EditSharesDollars({
 const ALLOCATION_COLORS = ["#1d4ed8", "#ea580c", "#0d6b4c", "#7c3aed", "#0891b2", "#b45309", "#be185d", "#4b5563"];
 
 export default function PortfolioPage() {
-  const [tickerInput, setTickerInput] = useState("");
   const [addMode, setAddMode] = useState<"shares" | "dollars">("shares");
   const [addAmount, setAddAmount] = useState("");
   const [symbols, setSymbols] = useState<string[]>([]);
@@ -127,23 +127,8 @@ export default function PortfolioPage() {
   const [chatError, setChatError] = useState<string | null>(null);
   const [portfolioHistory, setPortfolioHistory] = useState<{ date: string; label: string; value: number }[]>([]);
   const [portfolioHistoryLoading, setPortfolioHistoryLoading] = useState(false);
-  const [showTickerSuggestions, setShowTickerSuggestions] = useState(false);
-  const [tickerHighlightedIndex, setTickerHighlightedIndex] = useState(0);
-  const [yahooTickerSuggestions, setYahooTickerSuggestions] = useState<{ symbol: string; name: string }[]>([]);
-  const [tickerSuggestionsLoading, setTickerSuggestionsLoading] = useState(false);
-  const tickerSearchWrapRef = useRef<HTMLDivElement>(null);
-  const tickerSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tickerSearchQueryRef = useRef<string>("");
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (advisorDropdownRef.current && !advisorDropdownRef.current.contains(e.target as Node)) {
-        setAdvisorDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const ticker = useTickerAutocomplete();
+  useClickOutside(advisorDropdownRef, () => setAdvisorDropdownOpen(false));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -298,72 +283,8 @@ export default function PortfolioPage() {
     };
   }, [symbols, entryDetails]);
 
-  const tickerStaticSuggestions = useMemo(() => {
-    const q = tickerInput.trim().toUpperCase();
-    if (!q) return SYMBOL_SUGGESTIONS_LIST.slice(0, 10);
-    return SYMBOL_SUGGESTIONS_LIST.filter(
-      (s) =>
-        s.symbol.startsWith(q) ||
-        s.symbol.includes(q) ||
-        s.name.toUpperCase().includes(q)
-    ).slice(0, 10);
-  }, [tickerInput]);
-
-  const tickerSuggestions = useMemo(() => {
-    const q = tickerInput.trim();
-    if (q.length >= 2 && yahooTickerSuggestions.length > 0) return yahooTickerSuggestions;
-    return tickerStaticSuggestions;
-  }, [tickerInput, yahooTickerSuggestions, tickerStaticSuggestions]);
-
-  useEffect(() => {
-    const q = tickerInput.trim();
-    if (q.length < 2) {
-      setYahooTickerSuggestions([]);
-      setTickerSuggestionsLoading(false);
-      if (tickerSearchDebounceRef.current) {
-        clearTimeout(tickerSearchDebounceRef.current);
-        tickerSearchDebounceRef.current = null;
-      }
-      return;
-    }
-    if (tickerSearchDebounceRef.current) clearTimeout(tickerSearchDebounceRef.current);
-    setTickerSuggestionsLoading(true);
-    tickerSearchDebounceRef.current = setTimeout(async () => {
-      tickerSearchDebounceRef.current = null;
-      tickerSearchQueryRef.current = q;
-      try {
-        const res = await fetch(apiUrl(`/api/symbol-search?q=${encodeURIComponent(q)}`));
-        const data = (await res.json()) as { suggestions?: { symbol: string; name: string }[] };
-        if (tickerSearchQueryRef.current === q && Array.isArray(data.suggestions)) {
-          setYahooTickerSuggestions(data.suggestions);
-        }
-      } catch {
-        if (tickerSearchQueryRef.current === q) setYahooTickerSuggestions([]);
-      } finally {
-        if (tickerSearchQueryRef.current === q) setTickerSuggestionsLoading(false);
-      }
-    }, 280);
-    return () => {
-      if (tickerSearchDebounceRef.current) clearTimeout(tickerSearchDebounceRef.current);
-    };
-  }, [tickerInput]);
-
-  useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      if (tickerSearchWrapRef.current && !tickerSearchWrapRef.current.contains(e.target as Node)) {
-        setShowTickerSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
-  }, []);
-
-  useEffect(() => {
-    setTickerHighlightedIndex((i) => Math.min(i, Math.max(0, tickerSuggestions.length - 1)));
-  }, [tickerSuggestions.length]);
-
   const addToPortfolio = useCallback(async () => {
-    const symbol = tickerInput.trim().toUpperCase();
+    const symbol = ticker.input.trim().toUpperCase();
     if (!symbol) return;
     if (!/^[A-Z]{1,5}(\.[A-Z])?$/.test(symbol)) {
       setAddError("Invalid symbol. Use 1–5 letters, e.g. AAPL or BRK.A");
@@ -408,7 +329,7 @@ export default function PortfolioPage() {
       setSymbols(nextSymbols);
       setEntryDetails(nextDetails);
       setHoldings((prev) => [...prev, data]);
-      setTickerInput("");
+      ticker.setInput("");
       setAddAmount("");
       if (typeof window !== "undefined") {
         localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(nextSymbols));
@@ -419,7 +340,7 @@ export default function PortfolioPage() {
     } finally {
       setAddingSymbol(null);
     }
-  }, [tickerInput, symbols, addMode, addAmount, entryDetails]);
+  }, [ticker.input, ticker.setInput, symbols, addMode, addAmount, entryDetails]);
 
   const removeFromPortfolio = useCallback((symbol: string) => {
     setSymbols((prev) => {
@@ -583,31 +504,31 @@ export default function PortfolioPage() {
                   Holdings & performance
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <div className="relative" ref={tickerSearchWrapRef}>
+                  <div className="relative" ref={ticker.wrapRef}>
                     <input
                       type="text"
-                      value={tickerInput}
+                      value={ticker.input}
                       onChange={(e) => {
-                        setTickerInput(e.target.value.toUpperCase());
-                        setShowTickerSuggestions(true);
-                        setTickerHighlightedIndex(0);
+                        ticker.setInput(e.target.value.toUpperCase());
+                        ticker.setShow(true);
+                        ticker.setHighlightedIndex(0);
                       }}
-                      onFocus={() => setShowTickerSuggestions(true)}
+                      onFocus={() => ticker.setShow(true)}
                       onKeyDown={(e) => {
-                        if (showTickerSuggestions && tickerSuggestions.length > 0) {
+                        if (ticker.show && ticker.suggestions.length > 0) {
                           if (e.key === "ArrowDown") {
                             e.preventDefault();
-                            setTickerHighlightedIndex((i) => Math.min(i + 1, tickerSuggestions.length - 1));
+                            ticker.setHighlightedIndex((i) => Math.min(i + 1, ticker.suggestions.length - 1));
                           } else if (e.key === "ArrowUp") {
                             e.preventDefault();
-                            setTickerHighlightedIndex((i) => Math.max(i - 1, 0));
-                          } else if (e.key === "Enter" && tickerSuggestions[tickerHighlightedIndex]) {
+                            ticker.setHighlightedIndex((i) => Math.max(i - 1, 0));
+                          } else if (e.key === "Enter" && ticker.suggestions[ticker.highlightedIndex]) {
                             e.preventDefault();
-                            const s = tickerSuggestions[tickerHighlightedIndex];
-                            setTickerInput(s.symbol);
-                            setShowTickerSuggestions(false);
+                            const s = ticker.suggestions[ticker.highlightedIndex];
+                            ticker.setInput(s.symbol);
+                            ticker.setShow(false);
                           } else if (e.key === "Escape") {
-                            setShowTickerSuggestions(false);
+                            ticker.setShow(false);
                           }
                           return;
                         }
@@ -618,36 +539,36 @@ export default function PortfolioPage() {
                       autoComplete="off"
                       aria-label="Stock ticker"
                       aria-autocomplete="list"
-                      aria-expanded={showTickerSuggestions && tickerSuggestions.length > 0}
+                      aria-expanded={ticker.show && ticker.suggestions.length > 0}
                       aria-controls="portfolio-ticker-suggestions"
                       className="w-20 px-2 py-1 rounded border border-border bg-paper text-xs font-mono text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-accent/30"
                     />
-                    {showTickerSuggestions && (tickerSuggestions.length > 0 || tickerSuggestionsLoading) && (
+                    {ticker.show && (ticker.suggestions.length > 0 || ticker.loading) && (
                       <ul
                         id="portfolio-ticker-suggestions"
                         role="listbox"
                         className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-md border border-border bg-paper shadow-lg py-1 max-h-56 overflow-y-auto"
                       >
-                        {tickerSuggestionsLoading && tickerSuggestions.length === 0 ? (
+                        {ticker.loading && ticker.suggestions.length === 0 ? (
                           <li className="px-2 py-2 text-xs text-mute flex items-center gap-2">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
                             Searching…
                           </li>
                         ) : (
-                          tickerSuggestions.map((s, i) => (
+                          ticker.suggestions.map((s, i) => (
                             <li
                               key={`${s.symbol}-${i}`}
                               role="option"
-                              aria-selected={i === tickerHighlightedIndex}
+                              aria-selected={i === ticker.highlightedIndex}
                               className={clsx(
                                 "cursor-pointer px-2 py-1.5 text-xs flex flex-col gap-0.5",
-                                i === tickerHighlightedIndex ? "bg-accent-mute text-ink" : "text-ink hover:bg-accent-mute/70"
+                                i === ticker.highlightedIndex ? "bg-accent-mute text-ink" : "text-ink hover:bg-accent-mute/70"
                               )}
-                              onMouseEnter={() => setTickerHighlightedIndex(i)}
+                              onMouseEnter={() => ticker.setHighlightedIndex(i)}
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
-                                setTickerInput(s.symbol);
-                                setShowTickerSuggestions(false);
+                                ticker.setInput(s.symbol);
+                                ticker.setShow(false);
                               }}
                             >
                               <span className="font-mono font-semibold">{s.symbol}</span>
@@ -694,7 +615,7 @@ export default function PortfolioPage() {
                   <button
                     type="button"
                     onClick={addToPortfolio}
-                    disabled={addingSymbol !== null || !tickerInput.trim()}
+                    disabled={addingSymbol !== null || !ticker.input.trim()}
                     className="px-2 py-1 rounded bg-accent text-white text-xs font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     {addingSymbol ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden /> : <Plus className="w-3.5 h-3.5" aria-hidden />}

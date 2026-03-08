@@ -1,12 +1,7 @@
-import { GoogleGenAI } from "@google/genai";
 import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from "./advisors";
 import type { DiscussionMessage } from "./discussion";
+import { ai, extractText, GEMINI_MODEL } from "./gemini-client";
 import type { StockSentimentSummary } from "./sentiment";
-
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY ?? "",
-});
 
 function parseProCon(text: string): { content: string; isPro: boolean } {
   const t = text.trim();
@@ -25,13 +20,6 @@ function parseProCon(text: string): { content: string; isPro: boolean } {
     };
   }
   return { content: t, isPro: true };
-}
-
-function extractText(response: unknown): string {
-  const r = response as { text?: string; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  if (typeof r.text === "string" && r.text.trim()) return r.text;
-  const part = r.candidates?.[0]?.content?.parts?.[0];
-  return (part?.text as string) ?? "";
 }
 
 function getAdvisorName(advisorId: string, advisors: AdvisorForDiscussion[]): string {
@@ -62,7 +50,8 @@ export async function generateDiscussionWithGeminiFromAdvisors(
   const newsLines = sentiment.newsHeadlines?.map((n) => n.text) ?? sentiment.recentHeadlines?.map((h) => h.text) ?? [];
   const newsSnippet = newsLines.slice(0, 5).join(" | ");
   const sentimentLine = `Market sentiment (momentum): ${sentiment.currentSentiment.toFixed(2)} (scale -1 bearish to +1 bullish, from price data).`;
-  const context = `Stock: ${symbol}.
+  const context = `Data for stock ${symbol} (this is the only data you have—your take must be clearly about this stock):
+
 ${sentimentLine}
 ${metricParts.length > 0 ? `Key metrics: ${metricParts.join("; ")}.` : ""}
 ${newsSnippet ? `Recent news/developments: ${newsSnippet}.` : ""}`;
@@ -92,13 +81,16 @@ ${priorTakes}
 
 ${forUserLine}Your angle: ${focusLine}
 
-Give a substantive take in 4–6 sentences. Use your angle above; do not just repeat the same points as other advisors. Emphasize your own lens (e.g. moat, growth, margin of safety, macro, disruption). Tie your view to the data and end with exactly "(Pro)" or "(Con)". Use the ticker "${symbol}".`;
+Give a substantive take in 4–6 sentences that is clearly about ${symbol} and could not be copy-pasted onto another stock. You must:
+- Cite at least 2–3 concrete data points from the metrics and news above (e.g. "With a P/E of 22...", "Given the news that [headline]...", "At 80% of its 52-week range...").
+- Use your angle above; do not repeat the same points as other advisors. Emphasize your own lens (e.g. moat, growth, margin of safety, macro, disruption).
+- End with exactly "(Pro)" or "(Con)".`;
 
     const systemInstruction = `You are ${advisor.name}. Follow these instructions:
 
 ${advisor.instructions}
 
-Stock: ${symbol}. Give a complete take (4–6 sentences) from your philosophy. End with "(Pro)" or "(Con)".`;
+You are giving a take specifically about the stock ${symbol}. Reference the exact numbers and headlines from the data you are given; do not give generic advice that could apply to any stock. Your take must be clearly about this company. Give 4–6 sentences and end with "(Pro)" or "(Con)".`;
 
     try {
       const response = await ai.models.generateContent({

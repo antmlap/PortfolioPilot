@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Loader2 } from "lucide-react";
 import { DiscussionThread } from "@/components/DiscussionThread";
@@ -14,10 +14,11 @@ import { SelectAdvisors } from "@/components/SelectAdvisors";
 import { MetricsSkeleton, DiscussionSkeleton, SidebarSkeleton } from "@/components/LoadingSkeletons";
 import { ErrorState } from "@/components/ErrorState";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AppHeader } from "@/components/AppHeader";
 import { useTheme } from "@/components/ThemeProvider";
 import { ADVISORS, ADVISOR_IDS, type AdvisorId, type CustomAdvisor, type AdvisorForDiscussion } from "@/lib/advisors";
 import { apiUrl } from "@/lib/api";
-import { SYMBOL_SUGGESTIONS_LIST } from "@/lib/symbols";
+import { useTickerAutocomplete } from "@/lib/hooks/useTickerAutocomplete";
 import type { DiscussionMessage } from "@/lib/discussion";
 import type { StockSentimentSummary } from "@/lib/sentiment";
 
@@ -32,6 +33,7 @@ function HomeContent() {
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [sentiment, setSentiment] = useState<StockSentimentSummary | null>(null);
   const [discussion, setDiscussion] = useState<DiscussionMessage[]>([]);
+  const [discussionFromMock, setDiscussionFromMock] = useState(false);
   const [selectedAdvisorIds, setSelectedAdvisorIds] = useState<AdvisorId[]>(() => [
     "buffett",
     "lynch",
@@ -45,77 +47,7 @@ function HomeContent() {
   const [discussing, setDiscussing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchIdRef = useRef(0);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const [yahooSuggestions, setYahooSuggestions] = useState<{ symbol: string; name: string }[]>([]);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const searchWrapRef = useRef<HTMLDivElement>(null);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchQueryRef = useRef<string>("");
-
-  const staticSuggestions = useMemo(() => {
-    const q = inputSymbol.trim().toUpperCase();
-    if (!q) return SYMBOL_SUGGESTIONS_LIST.slice(0, 10);
-    return SYMBOL_SUGGESTIONS_LIST.filter(
-      (s) =>
-        s.symbol.startsWith(q) ||
-        s.symbol.includes(q) ||
-        s.name.toUpperCase().includes(q)
-    ).slice(0, 10);
-  }, [inputSymbol]);
-
-  const suggestions = useMemo(() => {
-    const q = inputSymbol.trim();
-    if (q.length >= 2 && yahooSuggestions.length > 0) return yahooSuggestions;
-    return staticSuggestions;
-  }, [inputSymbol, yahooSuggestions, staticSuggestions]);
-
-  useEffect(() => {
-    const q = inputSymbol.trim();
-    if (q.length < 2) {
-      setYahooSuggestions([]);
-      setSuggestionsLoading(false);
-      if (searchDebounceRef.current) {
-        clearTimeout(searchDebounceRef.current);
-        searchDebounceRef.current = null;
-      }
-      return;
-    }
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    setSuggestionsLoading(true);
-    searchDebounceRef.current = setTimeout(async () => {
-      searchDebounceRef.current = null;
-      searchQueryRef.current = q;
-      try {
-        const res = await fetch(apiUrl(`/api/symbol-search?q=${encodeURIComponent(q)}`));
-        const data = (await res.json()) as { suggestions?: { symbol: string; name: string }[] };
-        if (searchQueryRef.current === q && Array.isArray(data.suggestions)) {
-          setYahooSuggestions(data.suggestions);
-        }
-      } catch {
-        if (searchQueryRef.current === q) setYahooSuggestions([]);
-      } finally {
-        if (searchQueryRef.current === q) setSuggestionsLoading(false);
-      }
-    }, 280);
-    return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    };
-  }, [inputSymbol]);
-
-  useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
-  }, []);
-
-  useEffect(() => {
-    setHighlightedIndex((i) => Math.min(i, Math.max(0, suggestions.length - 1)));
-  }, [suggestions.length]);
+  const ticker = useTickerAutocomplete(DEFAULT_SYMBOL);
 
   const getErrorFromRes = async (res: Response, fallback: string) => {
     try {
@@ -158,6 +90,7 @@ function HomeContent() {
     setLoading(true);
     setError(null);
     setDiscussion([]);
+    setDiscussionFromMock(false);
     setDiscussing(true);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -210,6 +143,7 @@ function HomeContent() {
       setSentiment(sentJson);
       const messages = Array.isArray(discJson.messages) ? discJson.messages : [];
       setDiscussion(messages);
+      setDiscussionFromMock(discJson.fromMock === true);
       setDiscussing(false);
     } catch (e) {
       clearTimeout(timeoutId);
@@ -234,8 +168,9 @@ function HomeContent() {
   useEffect(() => {
     if (symbolFromUrl && symbolFromUrl.length <= 6) {
       setSymbol(symbolFromUrl);
-      setInputSymbol(symbolFromUrl);
+      ticker.setInput(symbolFromUrl);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbolFromUrl]);
 
   useEffect(() => {
@@ -257,7 +192,7 @@ function HomeContent() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const s = inputSymbol.trim().toUpperCase();
+    const s = ticker.input.trim().toUpperCase();
     if (!s) return;
     setError(null);
     try {
@@ -274,7 +209,7 @@ function HomeContent() {
       }
       setSymbol(data.symbol ?? s);
       setCompanyName(data.name ?? null);
-      setInputSymbol(data.symbol ?? s);
+      ticker.setInput(data.symbol ?? s);
       setError(null);
     } catch {
       setError("Could not verify symbol. Please try again.");
@@ -282,72 +217,22 @@ function HomeContent() {
   };
 
   const handleSelectSymbol = (s: string) => {
-    setInputSymbol(s);
+    ticker.setInput(s);
     setSymbol(s);
   };
 
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-paper">
-        <header
-          className="border-b border-border bg-paper/95 backdrop-blur-sm sticky top-0 z-10"
-          role="banner"
-        >
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <a
-                href="/"
-                className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper rounded"
-                aria-label="Gator Analyst home"
-              >
-                <img
-                  src="/logo.png"
-                  alt=""
-                  className="h-9 w-9 rounded-full object-cover [mix-blend-mode:darken]"
-                  width={36}
-                  height={36}
-                />
-                <span className="font-display text-xl font-semibold text-ink tracking-tight">
-                  Gator Analyst
-                </span>
-                <span className="text-mute text-sm hidden sm:inline">
-                  Stock discussion
-                </span>
-              </a>
-              <div className="flex items-center gap-3">
-                {userName && (
-                  <span className="text-sm text-mute hidden sm:inline" aria-label={`Signed in as ${userName}`}>
-                    Hi, {userName}
-                  </span>
-                )}
-                <a
-                  href="/browse"
-                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
-                >
-                  Browse
-                </a>
-                <a
-                  href="/portfolio"
-                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
-                >
-                  My Portfolio
-                </a>
-                <a
-                  href="/settings"
-                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
-                >
-                  Settings
-                </a>
-                <a
-                  href="/login"
-                  className="text-sm font-medium text-mute hover:text-accent transition-colors whitespace-nowrap"
-                >
-                  Log in
-                </a>
-              </div>
-            </div>
-          </div>
-        </header>
+        <AppHeader
+          rightSlot={
+            userName ? (
+              <span className="text-sm text-mute hidden sm:inline" aria-label={`Signed in as ${userName}`}>
+                Hi, {userName}
+              </span>
+            ) : undefined
+          }
+        />
 
         <main
           id="main"
@@ -385,37 +270,37 @@ function HomeContent() {
             role="search"
             aria-label="Search by ticker"
           >
-            <div className="relative" ref={searchWrapRef}>
+            <div className="relative" ref={ticker.wrapRef}>
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mute pointer-events-none"
                 aria-hidden
               />
               <input
                 type="text"
-                value={inputSymbol}
+                value={ticker.input}
                 onChange={(e) => {
-                  setInputSymbol(e.target.value.toUpperCase());
-                  setShowSuggestions(true);
-                  setHighlightedIndex(0);
+                  ticker.setInput(e.target.value.toUpperCase());
+                  ticker.setShow(true);
+                  ticker.setHighlightedIndex(0);
                 }}
-                onFocus={() => setShowSuggestions(true)}
+                onFocus={() => ticker.setShow(true)}
                 onKeyDown={(e) => {
-                  if (!showSuggestions || suggestions.length === 0) return;
+                  if (!ticker.show || ticker.suggestions.length === 0) return;
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
-                    setHighlightedIndex((i) => Math.min(i + 1, suggestions.length - 1));
+                    ticker.setHighlightedIndex((i) => Math.min(i + 1, ticker.suggestions.length - 1));
                   } else if (e.key === "ArrowUp") {
                     e.preventDefault();
-                    setHighlightedIndex((i) => Math.max(i - 1, 0));
-                  } else if (e.key === "Enter" && suggestions[highlightedIndex]) {
+                    ticker.setHighlightedIndex((i) => Math.max(i - 1, 0));
+                  } else if (e.key === "Enter" && ticker.suggestions[ticker.highlightedIndex]) {
                     e.preventDefault();
-                    const s = suggestions[highlightedIndex];
-                    setInputSymbol(s.symbol);
+                    const s = ticker.suggestions[ticker.highlightedIndex];
+                    ticker.setInput(s.symbol);
                     setSymbol(s.symbol);
                     setCompanyName(s.name);
-                    setShowSuggestions(false);
+                    ticker.setShow(false);
                   } else if (e.key === "Escape") {
-                    setShowSuggestions(false);
+                    ticker.setShow(false);
                   }
                 }}
                 placeholder="Symbol (e.g. AAPL)"
@@ -423,38 +308,38 @@ function HomeContent() {
                 autoComplete="off"
                 aria-label="Stock ticker symbol"
                 aria-autocomplete="list"
-                aria-expanded={showSuggestions && suggestions.length > 0}
+                aria-expanded={ticker.show && ticker.suggestions.length > 0}
                 aria-controls="search-suggestions"
                 id="symbol-search"
                 className="w-40 sm:w-48 pl-9 pr-3 py-2 rounded-md bg-surface border border-border text-sm font-mono text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
               />
-              {showSuggestions && (suggestions.length > 0 || suggestionsLoading) && (
+              {ticker.show && (ticker.suggestions.length > 0 || ticker.loading) && (
                 <ul
                   id="search-suggestions"
                   role="listbox"
                   className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border-2 border-border bg-surface shadow-lg py-1 max-h-64 overflow-y-auto"
                 >
-                  {suggestionsLoading && suggestions.length === 0 ? (
+                  {ticker.loading && ticker.suggestions.length === 0 ? (
                     <li className="px-3 py-3 text-sm text-mute flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
                       Searching Yahoo Finance…
                     </li>
                   ) : (
-                    suggestions.map((s, i) => (
+                    ticker.suggestions.map((s, i) => (
                       <li
                         key={`${s.symbol}-${i}`}
                         role="option"
-                        aria-selected={i === highlightedIndex}
+                        aria-selected={i === ticker.highlightedIndex}
                         className={`cursor-pointer px-3 py-2 text-sm flex flex-col gap-0.5 ${
-                          i === highlightedIndex ? "bg-accent-mute text-ink" : "text-ink hover:bg-accent-mute/70"
+                          i === ticker.highlightedIndex ? "bg-accent-mute text-ink" : "text-ink hover:bg-accent-mute/70"
                         }`}
-                        onMouseEnter={() => setHighlightedIndex(i)}
+                        onMouseEnter={() => ticker.setHighlightedIndex(i)}
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
-                          setInputSymbol(s.symbol);
+                          ticker.setInput(s.symbol);
                           setSymbol(s.symbol);
                           setCompanyName(s.name);
-                          setShowSuggestions(false);
+                          ticker.setShow(false);
                         }}
                       >
                         <span className="font-mono font-semibold">{s.symbol}</span>
@@ -511,6 +396,11 @@ function HomeContent() {
                 <p className="text-xs text-mute mb-4">
                   For discussion only. Not investment or financial advice.
                 </p>
+                {discussionFromMock && discussion.length > 0 && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mb-3 px-3 py-2 rounded bg-amber-500/10 border border-amber-500/30">
+                    Using offline fallback (e.g. API limit or no key). Advice is templated; try again later for stock-specific AI.
+                  </p>
+                )}
                 {error ? null : loading ? (
                   <DiscussionSkeleton />
                 ) : discussion.length > 0 ? (

@@ -1,22 +1,10 @@
 "use client";
 
-import { getAdvisorById, type CustomAdvisor } from "@/lib/advisors";
+import { getAdvisorById, getAdvisorLeftBorderClass, type CustomAdvisor } from "@/lib/advisors";
 import type { DiscussionMessage } from "@/lib/discussion";
 import { AdvisorAvatar } from "./AdvisorAvatar";
 import clsx from "clsx";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
-
-const advisorBorderColors: Record<string, string> = {
-  buffett: "border-l-orange",
-  lynch: "border-l-emerald-500",
-  dalio: "border-l-accent",
-  graham: "border-l-amber-600",
-  wood: "border-l-rose-500",
-};
-
-function getBorderColor(advisorId: string): string {
-  return advisorBorderColors[advisorId] ?? "border-l-violet-500";
-}
 
 interface DiscussionThreadProps {
   messages: DiscussionMessage[];
@@ -40,7 +28,7 @@ export function DiscussionThread({ messages, customAdvisors = [], className }: D
             key={msg.id}
             className={clsx(
               "flex gap-3 pl-3 border-l-4 rounded-r-md py-2 pr-2 bg-paper/50 animate-slide-up",
-              getBorderColor(msg.advisorId)
+              getAdvisorLeftBorderClass(msg.advisorId)
             )}
             style={{ animationDelay: `${i * 50}ms` }}
           >

@@ -13,25 +13,15 @@ import {
 import { apiUrl } from "@/lib/api";
 import type { StockHistoryPoint, TimeframeKey } from "@/lib/stock-history";
 
-/** Pick evenly spaced tick labels by time so x-axis intervals look consistent. */
+/** Pick evenly spaced tick labels by index (O(maxTicks)). */
 function getEvenlySpacedTicks(data: StockHistoryPoint[], maxTicks: number): string[] {
   if (data.length <= maxTicks) return data.map((d) => d.label);
-  const start = new Date(data[0].date).getTime();
-  const end = new Date(data[data.length - 1].date).getTime();
-  const step = (end - start) / (maxTicks - 1);
+  const step = (data.length - 1) / Math.max(1, maxTicks - 1);
   const tickLabels: string[] = [];
   for (let i = 0; i < maxTicks; i++) {
-    const t = start + step * i;
-    let best = data[0];
-    let bestDist = Math.abs(new Date(data[0].date).getTime() - t);
-    for (let j = 1; j < data.length; j++) {
-      const dist = Math.abs(new Date(data[j].date).getTime() - t);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = data[j];
-      }
-    }
-    if (!tickLabels.includes(best.label)) tickLabels.push(best.label);
+    const idx = Math.round(i * step);
+    const label = data[Math.min(idx, data.length - 1)]?.label;
+    if (label != null && !tickLabels.includes(label)) tickLabels.push(label);
   }
   return tickLabels.length ? tickLabels : data.map((d) => d.label).filter((_, i) => i % Math.ceil(data.length / maxTicks) === 0);
 }

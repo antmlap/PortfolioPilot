@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
+import { ai, extractText, GEMINI_MODEL } from "./gemini-client";
 
 export interface PortfolioContextItem {
   symbol: string;
@@ -23,17 +23,6 @@ export interface PortfolioContextItem {
 export interface ChatMessage {
   role: "user" | "model";
   content: string;
-}
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY ?? "",
-});
-
-function extractText(response: unknown): string {
-  const r = response as { text?: string; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  if (typeof r?.text === "string" && r.text.trim()) return r.text;
-  const part = r?.candidates?.[0]?.content?.parts?.[0];
-  return (part?.text as string) ?? "";
 }
 
 function buildPortfolioSummary(context: PortfolioContextItem[]): string {
@@ -113,7 +102,7 @@ export async function generatePortfolioChatReply(
   }
 
   const payload = {
-    model: "gemini-2.5-flash-lite",
+    model: GEMINI_MODEL,
     contents: contents.length > 0 ? contents : [{ role: "user" as const, parts: [{ text: "(User said nothing yet.)" }] }],
     config: {
       systemInstruction: systemPrompt,

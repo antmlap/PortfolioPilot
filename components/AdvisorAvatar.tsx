@@ -1,19 +1,7 @@
 "use client";
 
-import { getAdvisorById, type CustomAdvisor } from "@/lib/advisors";
+import { getAdvisorById, getAdvisorBorderClass, type CustomAdvisor } from "@/lib/advisors";
 import clsx from "clsx";
-
-const borderColors: Record<string, string> = {
-  buffett: "border-orange",
-  lynch: "border-emerald-500",
-  dalio: "border-accent",
-  graham: "border-amber-600",
-  wood: "border-rose-500",
-};
-
-function getBorderColor(advisorId: string): string {
-  return borderColors[advisorId] ?? "border-violet-500";
-}
 
 interface AdvisorAvatarProps {
   advisorId: string;
@@ -47,7 +35,7 @@ export function AdvisorAvatar({
         className={clsx(
           "rounded-full border-2 bg-surface flex items-center justify-center shrink-0 transition-all duration-300",
           sizeClasses[size],
-          getBorderColor(advisorId),
+          getAdvisorBorderClass(advisorId),
           isSpeaking &&
             "ring-2 ring-offset-2 ring-offset-paper ring-accent shadow-md"
         )}

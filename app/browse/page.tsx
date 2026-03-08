@@ -16,35 +16,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { apiUrl } from "@/lib/api";
-
-interface BrowseMover {
-  symbol: string;
-  name: string;
-  price: number;
-  changePercent: number;
-  change: number;
-}
-
-interface BrowseEarning {
-  symbol: string;
-  name: string;
-  date: string;
-  when: "bmo" | "amc";
-}
-
-interface BrowseIpo {
-  name: string;
-  symbol: string;
-  date: string;
-  exchange: string;
-}
-
-interface BrowseData {
-  upcomingEarnings: BrowseEarning[];
-  upcomingIpos: BrowseIpo[];
-  topGainers: BrowseMover[];
-  topLosers: BrowseMover[];
-}
+import type { BrowseData } from "@/lib/browse-types";
 
 function formatLastUpdated(ms: number): string {
   const sec = Math.floor(ms / 1000);

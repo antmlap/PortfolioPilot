@@ -6,12 +6,26 @@
 import type { StockSentimentSummary } from "./sentiment";
 import { getMockStockSentiment } from "./sentiment";
 
+const CACHE_TTL_MS = 60_000; // 1 minute
+const sentimentCache = new Map<
+  string,
+  { data: StockSentimentSummary; expiry: number }
+>();
+
 export async function getStockSentiment(symbol: string): Promise<StockSentimentSummary> {
+  const key = symbol.toUpperCase();
+  const cached = sentimentCache.get(key);
+  if (cached && cached.expiry > Date.now()) return cached.data;
+
   try {
     const { getStockDataFromYahoo } = await import("./yahoo-stock");
-    return await getStockDataFromYahoo(symbol);
+    const data = await getStockDataFromYahoo(symbol);
+    sentimentCache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
+    return data;
   } catch {
-    return getMockStockSentiment(symbol);
+    const data = getMockStockSentiment(symbol);
+    sentimentCache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
+    return data;
   }
 }
 

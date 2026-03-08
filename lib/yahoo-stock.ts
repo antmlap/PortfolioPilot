@@ -4,23 +4,13 @@
  */
 
 import YahooFinance from "yahoo-finance2";
-import type { StockSentimentSummary, SentimentLevel, SentimentVsPerformance } from "./sentiment";
+import { formatDate } from "./format";
+import { scoreToLevel } from "./sentiment";
+import type { StockSentimentSummary, SentimentVsPerformance } from "./sentiment";
 
 const yf = new YahooFinance();
 
 const SPY_SYMBOL = "^GSPC";
-
-function scoreToLevel(score: number): SentimentLevel {
-  if (score <= -0.6) return "very_bearish";
-  if (score <= -0.2) return "bearish";
-  if (score <= 0.2) return "neutral";
-  if (score <= 0.6) return "bullish";
-  return "very_bullish";
-}
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 /** Normalize a value to -1..1 using a scale (e.g. ±20 for 1-day %, ±15 for 1M %). */
 function normalizeToSentiment(value: number, scale: number): number {
@@ -96,8 +86,8 @@ export async function getStockDataFromYahoo(symbol: string): Promise<StockSentim
   ]);
 
   const quote = Array.isArray(quoteResult) ? quoteResult[0] : quoteResult;
-  const history = Array.isArray(historyResult) ? historyResult : historyResult;
-  const spyHistory = Array.isArray(spyHistoryResult) ? spyHistoryResult : spyHistoryResult;
+  const history = historyResult as { date: Date; close: number }[];
+  const spyHistory = spyHistoryResult as { date: Date; close: number }[];
   const insights = insightsResult;
   const search = searchResult as {
     news?: { title: string; publisher: string; providerPublishTime?: number | Date }[];
@@ -135,13 +125,13 @@ export async function getStockDataFromYahoo(symbol: string): Promise<StockSentim
       ? Math.round((regularMarketVolume / averageDailyVolume3Month) * 100) / 100
       : null;
 
-  const sortedHistory = (history as { date: Date; close: number }[]).sort(
+  const sortedHistory = history.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   const return1M = return1MFromHistory(sortedHistory);
 
   let vsSpy1M: number | null = null;
-  const sortedSpy = (spyHistory as { date: Date; close: number }[]).sort(
+  const sortedSpy = spyHistory.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   const spyReturn1M = return1MFromHistory(sortedSpy);

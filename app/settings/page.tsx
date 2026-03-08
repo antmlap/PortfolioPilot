@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useTheme, type ThemeId } from "@/components/ThemeProvider";
+import { AppHeader } from "@/components/AppHeader";
 
 function ThemeCard({
   id,
@@ -61,34 +61,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <header
-        className="border-b border-border bg-paper/95 backdrop-blur-sm sticky top-0 z-10"
-        role="banner"
-      >
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center gap-3 font-display text-xl font-semibold text-ink tracking-tight hover:opacity-80 transition-opacity"
-            >
-              <img
-                src="/logo.png"
-                alt=""
-                className="h-9 w-9 rounded-full object-cover [mix-blend-mode:darken]"
-                width={36}
-                height={36}
-              />
-              Gator Analyst
-            </Link>
-            <Link
-              href="/"
-              className="text-sm font-medium text-mute hover:text-accent transition-colors"
-            >
-              ← Back
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main
         id="main"

@@ -1,33 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   ADVISORS,
   ADVISOR_IDS,
   CUSTOM_ADVISOR_DEFAULTS,
+  getAdvisorLeftBorderClass,
   type AdvisorId,
   type CustomAdvisor,
 } from "@/lib/advisors";
+import { useClickOutside } from "@/lib/hooks/useClickOutside";
 import { ChevronDown, ChevronUp, Plus, UserPlus, Pencil, Trash2 } from "lucide-react";
 import clsx from "clsx";
-
-const accentBorder: Record<string, string> = {
-  buffett: "border-l-orange",
-  lynch: "border-l-emerald-500",
-  dalio: "border-l-accent",
-  graham: "border-l-amber-600",
-  wood: "border-l-rose-500",
-  munger: "border-l-amber-700",
-  marks: "border-l-slate-600",
-  bogle: "border-l-green-700",
-  soros: "border-l-indigo-600",
-  klarman: "border-l-amber-800",
-};
-
-function getAccentBorder(id: string): string {
-  if (id in accentBorder) return accentBorder[id];
-  return "border-l-violet-500";
-}
 
 interface SelectAdvisorsProps {
   selectedIds?: AdvisorId[];
@@ -52,6 +36,7 @@ export function SelectAdvisors({
   const [editInstructions, setEditInstructions] = useState("");
   const [showAddBuiltInDropdown, setShowAddBuiltInDropdown] = useState(false);
   const addAdvisorDropdownRef = useRef<HTMLDivElement>(null);
+  useClickOutside(addAdvisorDropdownRef, () => setShowAddBuiltInDropdown(false));
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [newCustom, setNewCustom] = useState<CustomAdvisor>(() => ({
     ...CUSTOM_ADVISOR_DEFAULTS,
@@ -130,18 +115,6 @@ export function SelectAdvisors({
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (addAdvisorDropdownRef.current && !addAdvisorDropdownRef.current.contains(e.target as Node)) {
-        setShowAddBuiltInDropdown(false);
-      }
-    };
-    if (showAddBuiltInDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showAddBuiltInDropdown]);
-
   const addCustomAdvisor = () => {
     const name = newCustom.name.trim();
     const instructions = newCustom.instructions.trim();
@@ -214,7 +187,7 @@ export function SelectAdvisors({
                         className={clsx(
                           "flex items-center gap-3 w-full px-4 py-3 text-left rounded-none transition-colors",
                           "hover:bg-orange-mute focus:bg-orange-mute focus:outline-none border-l-4 border-transparent",
-                          getAccentBorder(a.id)
+                          getAdvisorLeftBorderClass(a.id)
                         )}
                       >
                         <span className="text-xl shrink-0">{a.avatar}</span>
@@ -302,7 +275,7 @@ export function SelectAdvisors({
                 key={a.id}
                 className={clsx(
                   "rounded-lg border-l-4 bg-paper/50 border-border overflow-hidden",
-                  getAccentBorder(a.id)
+                  getAdvisorLeftBorderClass(a.id)
                 )}
               >
                 <div className="p-4">

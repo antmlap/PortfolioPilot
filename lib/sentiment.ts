@@ -3,7 +3,18 @@
  * For hackathon: mock data + structure for real API (News API, Alpha Vantage, etc.)
  */
 
+import { formatDate } from "./format";
+
 export type SentimentLevel = "very_bearish" | "bearish" | "neutral" | "bullish" | "very_bullish";
+
+/** Convert sentiment score (-1..1) to level. Shared with yahoo-stock. */
+export function scoreToLevel(score: number): SentimentLevel {
+  if (score <= -0.6) return "very_bearish";
+  if (score <= -0.2) return "bearish";
+  if (score <= 0.2) return "neutral";
+  if (score <= 0.6) return "bullish";
+  return "very_bullish";
+}
 
 export interface SentimentSnapshot {
   date: string;
@@ -60,16 +71,6 @@ export interface StockSentimentSummary {
   price?: number | null;
   /** Recent news/developments from Yahoo (headline + date) */
   newsHeadlines?: { text: string; date: string }[];
-}
-
-const LEVELS: SentimentLevel[] = ["very_bearish", "bearish", "neutral", "bullish", "very_bullish"];
-
-function scoreToLevel(score: number): SentimentLevel {
-  if (score <= -0.6) return "very_bearish";
-  if (score <= -0.2) return "bearish";
-  if (score <= 0.2) return "neutral";
-  if (score <= 0.6) return "bullish";
-  return "very_bullish";
 }
 
 /** Simple deterministic hash so the same symbol gets the same sentiment in a session. */
@@ -135,10 +136,6 @@ export function getMockStockSentiment(symbol: string): StockSentimentSummary {
     price: Math.round((50 + seed * 450) * 100) / 100,
     newsHeadlines: recentHeadlines.map((h) => ({ text: h.text, date: h.date })),
   };
-}
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
 }
 
 export function getSentimentLabel(level: SentimentLevel): string {

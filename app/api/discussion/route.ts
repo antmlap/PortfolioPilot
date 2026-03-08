@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from "@/lib/advisors";
 import { generateMockDiscussion } from "@/lib/discussion";
-import { generateDiscussionWithGemini, generateDiscussionWithGeminiFromAdvisors } from "@/lib/gemini-discussion";
+import { generateDiscussionWithGeminiFromAdvisors } from "@/lib/gemini-discussion";
 import { getStockSentiment } from "@/lib/sentiment-api";
 import { getMockStockSentiment, type StockSentimentSummary } from "@/lib/sentiment";
 import { validateSymbol } from "@/lib/validation";
@@ -15,14 +15,14 @@ function parseAdvisorIds(param: string | null): AdvisorId[] {
   return valid.length > 0 ? valid : [...ADVISOR_IDS];
 }
 
-function runDiscussion(
+async function runDiscussion(
   symbol: string,
   sentimentSummary: StockSentimentSummary,
   advisors: AdvisorForDiscussion[],
   forUser?: string | null
-) {
+): Promise<{ messages: Awaited<ReturnType<typeof generateDiscussionWithGeminiFromAdvisors>>; fromMock: boolean }> {
   if (advisors.length === 0) {
-    return Promise.resolve([]);
+    return { messages: [], fromMock: false };
   }
   const summary = {
     currentSentiment: sentimentSummary.currentSentiment,
@@ -30,19 +30,26 @@ function runDiscussion(
     recentHeadlines: sentimentSummary.recentHeadlines,
   };
   if (process.env.GEMINI_API_KEY) {
-    return generateDiscussionWithGeminiFromAdvisors(
-      symbol,
-      sentimentSummary,
-      advisors,
-      { forUser: forUser || undefined }
-    ).catch((err) => {
-      console.error("Gemini discussion error:", err);
-      return generateMockDiscussion(symbol, summary, advisors.map((a) => a.id));
-    });
+    try {
+      const messages = await generateDiscussionWithGeminiFromAdvisors(
+        symbol,
+        sentimentSummary,
+        advisors,
+        { forUser: forUser || undefined }
+      );
+      return { messages, fromMock: false };
+    } catch (err) {
+      console.error("Gemini discussion error (e.g. rate limit or token limit):", err);
+      return {
+        messages: generateMockDiscussion(symbol, summary, advisors.map((a) => a.id)),
+        fromMock: true,
+      };
+    }
   }
-  return Promise.resolve(
-    generateMockDiscussion(symbol, summary, advisors.map((a) => a.id))
-  );
+  return {
+    messages: generateMockDiscussion(symbol, summary, advisors.map((a) => a.id)),
+    fromMock: true,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -64,30 +71,12 @@ export async function GET(request: NextRequest) {
     } catch {
       sentimentSummary = getMockStockSentiment(symbol);
     }
-
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const advisors: AdvisorForDiscussion[] = advisorIds.map((id) => {
-          const a = ADVISORS[id];
-          return { id: a.id, name: a.name, title: a.title, instructions: a.instructions, discussionFocus: a.discussionFocus };
-        });
-        const messages = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
-        return NextResponse.json({ symbol, messages });
-      } catch (err) {
-        console.error("Gemini discussion error:", err);
-      }
-    }
-
-    const messages = generateMockDiscussion(
-      symbol,
-      {
-        currentSentiment: sentimentSummary.currentSentiment,
-        outperformRate: sentimentSummary.outperformRate,
-        recentHeadlines: sentimentSummary.recentHeadlines,
-      },
-      advisorIds
-    );
-    return NextResponse.json({ symbol, messages });
+    const advisors: AdvisorForDiscussion[] = advisorIds.map((id) => {
+      const a = ADVISORS[id];
+      return { id: a.id, name: a.name, title: a.title, instructions: a.instructions, discussionFocus: a.discussionFocus };
+    });
+    const { messages, fromMock } = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
+    return NextResponse.json({ symbol, messages, fromMock });
   } catch (err) {
     console.error("Discussion API error:", err);
     return NextResponse.json(
@@ -126,8 +115,8 @@ export async function POST(request: NextRequest) {
     } catch {
       sentimentSummary = getMockStockSentiment(symbol);
     }
-    const messages = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
-    return NextResponse.json({ symbol, messages });
+    const { messages, fromMock } = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
+    return NextResponse.json({ symbol, messages, fromMock });
   } catch (err) {
     console.error("Discussion API error:", err);
     return NextResponse.json(
