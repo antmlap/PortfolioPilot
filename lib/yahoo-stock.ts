@@ -227,6 +227,7 @@ export async function getStockDataFromYahoo(symbol: string): Promise<StockSentim
     volumeVsAvg,
     dividendYield: dividendYield != null ? Math.round(dividendYield * 1000) / 1000 : null,
     eps,
+    price: Math.round(price * 100) / 100,
     newsHeadlines: newsHeadlines.length > 0 ? newsHeadlines : undefined,
   };
 }

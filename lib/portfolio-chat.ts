@@ -3,6 +3,8 @@ import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
 
 export interface PortfolioContextItem {
   symbol: string;
+  shares?: number | null;
+  investedDollars?: number | null;
   pe?: number | null;
   forwardPE?: number | null;
   marketCap?: number | null;
@@ -40,8 +42,12 @@ function buildPortfolioSummary(context: PortfolioContextItem[]): string {
   }
   return context
     .map((c) => {
+      const positionParts: string[] = [];
+      if (c.shares != null && c.shares > 0) positionParts.push(`${c.shares} shares`);
+      if (c.investedDollars != null && c.investedDollars > 0) positionParts.push(`$${c.investedDollars.toLocaleString("en-US", { maximumFractionDigits: 0 })} invested`);
+      const positionStr = positionParts.length > 0 ? ` (${positionParts.join(", ")})` : "";
       const parts: string[] = [
-        `${c.symbol}:`,
+        `${c.symbol}${positionStr}:`,
         c.pe != null ? `P/E ${c.pe}` : "",
         c.forwardPE != null ? `Forward P/E ${c.forwardPE}` : "",
         c.beta != null ? `Beta ${c.beta}` : "",

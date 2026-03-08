@@ -7,7 +7,12 @@ import {
 } from "@/lib/portfolio-chat";
 
 export async function POST(request: NextRequest) {
-  let body: { messages?: ChatMessage[]; symbols?: string[]; advisorId?: string };
+  let body: {
+    messages?: ChatMessage[];
+    symbols?: string[];
+    entryDetails?: Record<string, { shares?: number; investedDollars?: number }>;
+    advisorId?: string;
+  };
   try {
     body = await request.json();
   } catch {
@@ -22,12 +27,19 @@ export async function POST(request: NextRequest) {
   const symbols = Array.isArray(body.symbols)
     ? body.symbols.map((s) => String(s).toUpperCase().trim()).filter(Boolean)
     : [];
+  const entryDetails =
+    body.entryDetails && typeof body.entryDetails === "object" && !Array.isArray(body.entryDetails)
+      ? body.entryDetails
+      : {};
 
   const portfolioContext: PortfolioContextItem[] = await Promise.all(
     symbols.map(async (symbol) => {
       const summary = await getStockSentiment(symbol);
+      const details = entryDetails[symbol];
       return {
         symbol: summary.symbol,
+        shares: details?.shares,
+        investedDollars: details?.investedDollars,
         pe: summary.pe,
         forwardPE: summary.forwardPE,
         marketCap: summary.marketCap,

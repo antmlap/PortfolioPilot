@@ -56,6 +56,8 @@ export interface StockSentimentSummary {
   dividendYield?: number | null;
   /** EPS trailing twelve months */
   eps?: number | null;
+  /** Current/last price (e.g. regularMarketPrice) */
+  price?: number | null;
   /** Recent news/developments from Yahoo (headline + date) */
   newsHeadlines?: { text: string; date: string }[];
 }
@@ -130,6 +132,7 @@ export function getMockStockSentiment(symbol: string): StockSentimentSummary {
     volumeVsAvg: 0.8 + seed * 0.6,
     dividendYield: seed < 0.5 ? Math.round(seed * 4 * 1000) / 1000 : null,
     eps: Math.round((1 + seed * 5) * 10) / 10,
+    price: Math.round((50 + seed * 450) * 100) / 100,
     newsHeadlines: recentHeadlines.map((h) => ({ text: h.text, date: h.date })),
   };
 }
