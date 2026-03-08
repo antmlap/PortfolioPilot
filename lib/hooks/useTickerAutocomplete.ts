@@ -5,7 +5,7 @@ import { apiUrl } from "@/lib/api";
 import { SYMBOL_SUGGESTIONS_LIST } from "@/lib/symbols";
 import { useClickOutside } from "./useClickOutside";
 
-const DEBOUNCE_MS = 280;
+const DEBOUNCE_MS = 450;
 
 export interface TickerSuggestion {
   symbol: string;

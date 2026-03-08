@@ -34,6 +34,7 @@ function HomeContent() {
   const [sentiment, setSentiment] = useState<StockSentimentSummary | null>(null);
   const [discussion, setDiscussion] = useState<DiscussionMessage[]>([]);
   const [discussionFromMock, setDiscussionFromMock] = useState(false);
+  const [discussionFallbackReason, setDiscussionFallbackReason] = useState<string | null>(null);
   const [selectedAdvisorIds, setSelectedAdvisorIds] = useState<AdvisorId[]>(() => [
     "buffett",
     "lynch",
@@ -47,6 +48,7 @@ function HomeContent() {
   const [discussing, setDiscussing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchIdRef = useRef(0);
+  const fetchDataRef = useRef<(sym: string) => Promise<void>>(() => Promise.resolve());
   const ticker = useTickerAutocomplete(DEFAULT_SYMBOL);
 
   const getErrorFromRes = async (res: Response, fallback: string) => {
@@ -91,6 +93,7 @@ function HomeContent() {
     setError(null);
     setDiscussion([]);
     setDiscussionFromMock(false);
+    setDiscussionFallbackReason(null);
     setDiscussing(true);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -144,6 +147,7 @@ function HomeContent() {
       const messages = Array.isArray(discJson.messages) ? discJson.messages : [];
       setDiscussion(messages);
       setDiscussionFromMock(discJson.fromMock === true);
+      setDiscussionFallbackReason(typeof discJson.fallbackReason === "string" ? discJson.fallbackReason : null);
       setDiscussing(false);
     } catch (e) {
       clearTimeout(timeoutId);
@@ -165,6 +169,8 @@ function HomeContent() {
     }
   }, [buildAdvisorsForDiscussion, customAdvisors, instructionOverrides, selectedAdvisorIds, userName]);
 
+  fetchDataRef.current = fetchData;
+
   useEffect(() => {
     if (symbolFromUrl && symbolFromUrl.length <= 6) {
       setSymbol(symbolFromUrl);
@@ -173,10 +179,12 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbolFromUrl]);
 
+  // Only refetch when symbol changes — not when advisors/overrides change (fewer requests).
   useEffect(() => {
-    fetchData(symbol);
-  }, [symbol, fetchData]);
+    fetchDataRef.current(symbol);
+  }, [symbol]);
 
+  // Fetch company name only when symbol changes; do it in same round as main data to avoid extra effect.
   useEffect(() => {
     let cancelled = false;
     fetch(apiUrl(`/api/symbol?symbol=${encodeURIComponent(symbol)}`))
@@ -399,6 +407,9 @@ function HomeContent() {
                 {discussionFromMock && discussion.length > 0 && (
                   <p className="text-xs text-amber-700 dark:text-amber-400 mb-3 px-3 py-2 rounded bg-amber-500/10 border border-amber-500/30">
                     Using offline fallback (e.g. API limit or no key). Advice is templated; try again later for stock-specific AI.
+                    {discussionFallbackReason && (
+                      <span className="block mt-1 opacity-90">Reason: {discussionFallbackReason}</span>
+                    )}
                   </p>
                 )}
                 {error ? null : loading ? (

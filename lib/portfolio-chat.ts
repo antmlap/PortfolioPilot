@@ -1,5 +1,5 @@
 import { ADVISOR_IDS, ADVISORS, type AdvisorId } from "./advisors";
-import { ai, extractText, GEMINI_MODEL } from "./gemini-client";
+import { getAi, extractText, GEMINI_MODEL, withRetry } from "./gemini-client";
 
 export interface PortfolioContextItem {
   symbol: string;
@@ -111,22 +111,6 @@ export async function generatePortfolioChatReply(
     },
   };
 
-  const maxAttempts = 3;
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const response = await ai.models.generateContent(payload);
-      return extractText(response) || "";
-    } catch (err) {
-      lastError = err;
-      const msg = err instanceof Error ? err.message : String(err);
-      const isRateLimit = msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota") || msg.includes("rate");
-      if (isRateLimit && attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, 6000));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw lastError;
+  const response = await withRetry(() => getAi().models.generateContent(payload));
+  return extractText(response) || "";
 }

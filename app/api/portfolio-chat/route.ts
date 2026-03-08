@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hasGeminiApiKey } from "@/lib/gemini-client";
 import { getStockSentiment } from "@/lib/sentiment-api";
 import {
   generatePortfolioChatReply,
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     })
   );
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (!hasGeminiApiKey()) {
     return NextResponse.json({
       message: {
         role: "model",

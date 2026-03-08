@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from "@/lib/advisors";
 import { generateMockDiscussion } from "@/lib/discussion";
 import { generateDiscussionWithGeminiFromAdvisors } from "@/lib/gemini-discussion";
+import { hasGeminiApiKey } from "@/lib/gemini-client";
 import { getStockSentiment } from "@/lib/sentiment-api";
 import { getMockStockSentiment, type StockSentimentSummary } from "@/lib/sentiment";
 import { validateSymbol } from "@/lib/validation";
@@ -20,7 +21,11 @@ async function runDiscussion(
   sentimentSummary: StockSentimentSummary,
   advisors: AdvisorForDiscussion[],
   forUser?: string | null
-): Promise<{ messages: Awaited<ReturnType<typeof generateDiscussionWithGeminiFromAdvisors>>; fromMock: boolean }> {
+): Promise<{
+  messages: Awaited<ReturnType<typeof generateDiscussionWithGeminiFromAdvisors>>;
+  fromMock: boolean;
+  fallbackReason?: string;
+}> {
   if (advisors.length === 0) {
     return { messages: [], fromMock: false };
   }
@@ -29,7 +34,7 @@ async function runDiscussion(
     outperformRate: sentimentSummary.outperformRate,
     recentHeadlines: sentimentSummary.recentHeadlines,
   };
-  if (process.env.GEMINI_API_KEY) {
+  if (hasGeminiApiKey()) {
     try {
       const messages = await generateDiscussionWithGeminiFromAdvisors(
         symbol,
@@ -39,16 +44,19 @@ async function runDiscussion(
       );
       return { messages, fromMock: false };
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error("Gemini discussion error (e.g. rate limit or token limit):", err);
       return {
         messages: generateMockDiscussion(symbol, summary, advisors.map((a) => a.id)),
         fromMock: true,
+        fallbackReason: msg.slice(0, 200),
       };
     }
   }
   return {
     messages: generateMockDiscussion(symbol, summary, advisors.map((a) => a.id)),
     fromMock: true,
+    fallbackReason: "No API key",
   };
 }
 
@@ -75,8 +83,8 @@ export async function GET(request: NextRequest) {
       const a = ADVISORS[id];
       return { id: a.id, name: a.name, title: a.title, instructions: a.instructions, discussionFocus: a.discussionFocus };
     });
-    const { messages, fromMock } = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
-    return NextResponse.json({ symbol, messages, fromMock });
+    const { messages, fromMock, fallbackReason } = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
+    return NextResponse.json({ symbol, messages, fromMock, ...(fallbackReason && { fallbackReason }) });
   } catch (err) {
     console.error("Discussion API error:", err);
     return NextResponse.json(
@@ -115,8 +123,8 @@ export async function POST(request: NextRequest) {
     } catch {
       sentimentSummary = getMockStockSentiment(symbol);
     }
-    const { messages, fromMock } = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
-    return NextResponse.json({ symbol, messages, fromMock });
+    const { messages, fromMock, fallbackReason } = await runDiscussion(symbol, sentimentSummary, advisors, forUser);
+    return NextResponse.json({ symbol, messages, fromMock, ...(fallbackReason && { fallbackReason }) });
   } catch (err) {
     console.error("Discussion API error:", err);
     return NextResponse.json(

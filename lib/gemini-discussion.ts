@@ -1,6 +1,6 @@
-import { ADVISOR_IDS, ADVISORS, type AdvisorForDiscussion, type AdvisorId } from "./advisors";
+import { ADVISORS, type AdvisorForDiscussion } from "./advisors";
 import type { DiscussionMessage } from "./discussion";
-import { ai, extractText, GEMINI_MODEL } from "./gemini-client";
+import { getAi, extractText, GEMINI_MODEL, withRetry, ADVISOR_CALL_DELAY_MS } from "./gemini-client";
 import type { StockSentimentSummary } from "./sentiment";
 
 function parseProCon(text: string): { content: string; isPro: boolean } {
@@ -92,16 +92,21 @@ ${advisor.instructions}
 
 You are giving a take specifically about the stock ${symbol}. Reference the exact numbers and headlines from the data you are given; do not give generic advice that could apply to any stock. Your take must be clearly about this company. Give 4–6 sentences and end with "(Pro)" or "(Con)".`;
 
+    if (i > 0) {
+      await new Promise((r) => setTimeout(r, ADVISOR_CALL_DELAY_MS));
+    }
     try {
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: [{ role: "user", parts: [{ text: userMessage }] }],
-        config: {
-          systemInstruction,
-          maxOutputTokens: 512,
-          temperature: 0.7,
-        },
-      });
+      const response = await withRetry(() =>
+        getAi().models.generateContent({
+          model: GEMINI_MODEL,
+          contents: [{ role: "user", parts: [{ text: userMessage }] }],
+          config: {
+            systemInstruction,
+            maxOutputTokens: 512,
+            temperature: 0.7,
+          },
+        })
+      );
       const raw = extractText(response);
       if (!raw || raw.includes("Error") || raw.length < 10) {
         throw new Error("Empty or invalid Gemini response");
@@ -122,16 +127,4 @@ You are giving a take specifically about the stock ${symbol}. Reference the exac
   }
 
   return messages;
-}
-
-export async function generateDiscussionWithGemini(
-  symbol: string,
-  sentiment: StockSentimentSummary,
-  advisorIds: AdvisorId[] = ADVISOR_IDS
-): Promise<DiscussionMessage[]> {
-  const advisors: AdvisorForDiscussion[] = advisorIds.map((id) => {
-    const a = ADVISORS[id];
-    return { id: a.id, name: a.name, title: a.title, instructions: a.instructions, discussionFocus: a.discussionFocus };
-  });
-  return generateDiscussionWithGeminiFromAdvisors(symbol, sentiment, advisors);
 }

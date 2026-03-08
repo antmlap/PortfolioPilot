@@ -16,12 +16,6 @@ export interface DiscussionMessage {
   isPro?: boolean; // pro for the stock vs con
 }
 
-export interface DiscussionState {
-  stockSymbol: string;
-  messages: DiscussionMessage[];
-  status: "idle" | "discussing" | "done";
-}
-
 type MockContext = {
   symbol: string;
   sentiment: number;
